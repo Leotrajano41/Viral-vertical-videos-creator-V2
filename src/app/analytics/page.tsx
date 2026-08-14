@@ -1,76 +1,70 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { BarChart3, TrendingUp, Eye, ThumbsUp, MessageSquare, Award } from "lucide-react";
+import React from "react";
+import { motion } from "framer-motion";
+import { BarChart3, Eye, ThumbsUp, MessageSquare, TrendingUp, Award } from "lucide-react";
+import { StatCard } from "@/components/ui/modern/StatCard";
 
-export default function AnalyticsPage() {
-  const [data, setData] = useState({
-    totalViews: 1420000,
-    totalLikes: 98500,
-    totalComments: 14200,
-    engagementRate: "8.4%",
-    publishedCount: 142,
-  });
-
+export default function ModernAnalyticsPage() {
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <BarChart3 className="text-indigo-400" />
-            Analytics & Desempenho dos Canais
-          </h1>
-          <p className="text-xs text-gray-400">Estatísticas pós-publicação e métricas de engajamento</p>
-        </div>
+    <div className="space-y-8 max-w-7xl mx-auto">
+      {/* Header Banner */}
+      <div>
+        <h1 className="text-2xl md:text-3xl font-extrabold text-white flex items-center gap-3">
+          <BarChart3 className="text-indigo-400" /> Analytics & Desempenho dos Canais
+        </h1>
+        <p className="text-xs text-gray-300">Métricas pós-publicação de engajamento e alcance de vídeos verticais</p>
       </div>
 
-      {/* Top Metrics Row */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-surface border border-border p-5 rounded-xl flex items-center justify-between">
-          <div>
-            <p className="text-xs text-gray-400 font-medium">Visualizações Totais</p>
-            <h3 className="text-2xl font-bold text-white mt-1">{data.totalViews.toLocaleString()}</h3>
-          </div>
-          <div className="p-3 bg-indigo-500/10 rounded-lg text-indigo-400">
-            <Eye size={24} />
-          </div>
-        </div>
-
-        <div className="bg-surface border border-border p-5 rounded-xl flex items-center justify-between">
-          <div>
-            <p className="text-xs text-gray-400 font-medium">Curtidas / Likes</p>
-            <h3 className="text-2xl font-bold text-white mt-1">{data.totalLikes.toLocaleString()}</h3>
-          </div>
-          <div className="p-3 bg-emerald-500/10 rounded-lg text-emerald-400">
-            <ThumbsUp size={24} />
-          </div>
-        </div>
-
-        <div className="bg-surface border border-border p-5 rounded-xl flex items-center justify-between">
-          <div>
-            <p className="text-xs text-gray-400 font-medium">Comentários</p>
-            <h3 className="text-2xl font-bold text-white mt-1">{data.totalComments.toLocaleString()}</h3>
-          </div>
-          <div className="p-3 bg-amber-500/10 rounded-lg text-amber-400">
-            <MessageSquare size={24} />
-          </div>
-        </div>
-
-        <div className="bg-surface border border-border p-5 rounded-xl flex items-center justify-between">
-          <div>
-            <p className="text-xs text-gray-400 font-medium">Taxa de Engajamento</p>
-            <h3 className="text-2xl font-bold text-white mt-1">{data.engagementRate}</h3>
-          </div>
-          <div className="p-3 bg-rose-500/10 rounded-lg text-rose-400">
-            <TrendingUp size={24} />
-          </div>
-        </div>
+      {/* Top 4 Metrics Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        <StatCard
+          title="Visualizações Totais"
+          value="1.420.000"
+          subtext="Alcance em Shorts & Reels"
+          icon={Eye}
+          color="indigo"
+          trend="+24% este mês"
+        />
+        <StatCard
+          title="Curtidas / Likes"
+          value="98.500"
+          subtext="Interações de fãs"
+          icon={ThumbsUp}
+          color="emerald"
+        />
+        <StatCard
+          title="Comentários"
+          value="14.200"
+          subtext="Engajamento ativo"
+          icon={MessageSquare}
+          color="amber"
+        />
+        <StatCard
+          title="Taxa de Engajamento"
+          value="8.4%"
+          subtext="Acima da média de mercado"
+          icon={TrendingUp}
+          color="cyan"
+          trend="Excelente"
+        />
       </div>
 
-      {/* Performance Bar Overview */}
-      <div className="bg-surface border border-border rounded-xl p-6 space-y-4">
-        <h2 className="text-base font-semibold text-white">Desempenho dos Últimos 7 Dias</h2>
-        <div className="h-48 flex items-end gap-4 pt-8 justify-between border-b border-border pb-4">
+      {/* 7-Day Performance Chart */}
+      <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="glass-card rounded-2xl p-6 border border-white/10 space-y-4"
+      >
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-extrabold text-white">Desempenho de Alcance dos Últimos 7 Dias</h2>
+          <span className="text-xs font-semibold px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+            Top Performing
+          </span>
+        </div>
+
+        <div className="h-56 flex items-end gap-4 pt-8 justify-between border-b border-white/10 pb-4">
           {[
             { day: "Seg", val: 65 },
             { day: "Ter", val: 80 },
@@ -80,16 +74,16 @@ export default function AnalyticsPage() {
             { day: "Sáb", val: 140 },
             { day: "Dom", val: 160 },
           ].map((bar) => (
-            <div key={bar.day} className="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+            <div key={bar.day} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
               <div
-                className="w-full bg-indigo-500 hover:bg-indigo-400 rounded-t-md transition-all duration-300"
+                className="w-full bg-gradient-to-t from-indigo-600 via-purple-500 to-cyan-400 rounded-t-lg transition-all duration-300 group-hover:brightness-125 group-hover:glow-primary"
                 style={{ height: `${(bar.val / 160) * 100}%` }}
-              ></div>
-              <span className="text-xs text-gray-400 font-mono">{bar.day}</span>
+              />
+              <span className="text-xs text-gray-400 font-mono group-hover:text-white transition">{bar.day}</span>
             </div>
           ))}
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

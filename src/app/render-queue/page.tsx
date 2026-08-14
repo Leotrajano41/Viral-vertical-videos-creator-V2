@@ -1,133 +1,107 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { PlayCircle, PauseCircle, RefreshCw, CheckCircle2, AlertTriangle, Clock } from "lucide-react";
+import React, { useState } from "react";
+import { motion } from "framer-motion";
+import { PlayCircle, Cpu, CheckCircle2, RotateCcw, Pause, Sparkles } from "lucide-react";
+import { ModernButton } from "@/components/ui/modern/Button";
 
-export default function RenderQueuePage() {
-  const [filter, setFilter] = useState("all");
+export default function ModernRenderQueuePage() {
   const [jobs, setJobs] = useState([
     {
-      id: "job_104",
-      title: "3 Fatos Inacreditáveis sobre GTA 6",
-      project: "GTA 6 Curiosidades",
-      status: "rendering",
-      progress: 80,
-      eta: "12s",
+      id: "job_101",
+      title: "GTA 6 Vazamentos do Mapa e Personagens",
+      project: "GTA 6 Vazações",
+      progress: 65,
+      status: "processing",
+      eta: "1 min restante",
     },
     {
-      id: "job_105",
-      title: "MISTÉRIO DO NOVO CONSOLE REVELADO",
-      project: "Notícias Tech",
-      status: "draft",
+      id: "job_102",
+      title: "História Secreta do Hit Livin on a Prayer",
+      project: "Bon Jovi História",
       progress: 0,
-      eta: "Pendente",
+      status: "pending",
+      eta: "Aguardando worker",
     },
     {
       id: "job_103",
-      title: "Segredos Ocultos da Física Quântica",
-      project: "Ciência Suprema",
-      status: "rendered",
+      title: "Top 5 Golaços de Kane no Bayern",
+      project: "Bayern de Munique",
       progress: 100,
-      eta: "Concluído",
+      status: "completed",
+      eta: "Renderização Concluída",
     },
   ]);
 
-  async function handleRetry(jobId: string) {
-    try {
-      const res = await fetch("/api/render/retry", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ videoId: jobId }),
-      });
-      if (res.ok) {
-        setJobs((prev) =>
-          prev.map((j) => (j.id === jobId ? { ...j, status: "rendering", progress: 10 } : j))
-        );
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  }
-
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
+    <div className="space-y-8 max-w-7xl mx-auto">
+      {/* Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <PlayCircle className="text-emerald-400" />
-            Fila de Renderização na Nuvem (BullMQ Workers)
+          <h1 className="text-2xl md:text-3xl font-extrabold text-white flex items-center gap-3">
+            <PlayCircle className="text-emerald-400" /> Fila de Renderização na Nuvem
           </h1>
-          <p className="text-xs text-gray-400">Monitoramento em tempo real do processamento paralelos de vídeos</p>
+          <p className="text-xs text-gray-300">Acompanhamento dos workers do BullMQ em tempo real</p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="px-3 py-2 bg-surface border border-border rounded-lg text-sm text-white focus:outline-none"
-          >
-            <option value="all">Todos os Status</option>
-            <option value="rendering">Em Produção</option>
-            <option value="rendered">Concluídos</option>
-            <option value="error">Com Erro</option>
-          </select>
-
-          <button className="flex items-center gap-1.5 px-3 py-2 bg-amber-600/10 hover:bg-amber-600/20 text-amber-400 border border-amber-500/20 rounded-lg text-xs font-semibold transition">
-            <PauseCircle size={16} />
-            Pausar Fila
-          </button>
+        <div className="flex items-center gap-2">
+          <span className="px-3 py-1.5 text-xs font-bold rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-2">
+            <Cpu size={16} /> 2 Workers Ativos
+          </span>
         </div>
       </div>
 
-      <div className="space-y-3">
+      {/* Jobs List */}
+      <div className="space-y-4">
         {jobs.map((job) => (
-          <div key={job.id} className="bg-surface border border-border p-4 rounded-xl flex items-center justify-between gap-4">
-            <div className="space-y-1 flex-1">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400 font-medium">Projeto: {job.project}</span>
-                <span className="text-xs text-gray-500">• Job ID: #{job.id}</span>
+          <motion.div
+            key={job.id}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="glass-card rounded-2xl p-6 border border-white/10 hover:border-emerald-500/30 transition flex flex-col md:flex-row md:items-center justify-between gap-6"
+          >
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-3 mb-2">
+                <span
+                  className={`px-2.5 py-0.5 text-[10px] font-extrabold rounded-full border ${
+                    job.status === "completed"
+                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                      : job.status === "processing"
+                      ? "bg-amber-500/10 text-amber-400 border-amber-500/20 animate-pulse"
+                      : "bg-indigo-500/10 text-indigo-400 border-indigo-500/20"
+                  }`}
+                >
+                  {job.status.toUpperCase()}
+                </span>
+                <span className="text-xs font-semibold text-gray-400">{job.project}</span>
               </div>
-              <h3 className="text-sm font-semibold text-white">{job.title}</h3>
 
-              {job.status === "rendering" && (
-                <div className="flex items-center gap-3 pt-1">
-                  <div className="w-48 bg-gray-800 h-2 rounded-full overflow-hidden">
-                    <div className="bg-emerald-400 h-full transition-all duration-300" style={{ width: `${job.progress}%` }}></div>
-                  </div>
-                  <span className="text-xs font-mono text-emerald-400">{job.progress}%</span>
-                  <span className="text-xs text-gray-400 font-mono">ETA: {job.eta}</span>
-                </div>
-              )}
+              <h3 className="text-base font-bold text-white truncate">{job.title}</h3>
+              <p className="text-xs text-gray-400 mt-1">{job.eta}</p>
+
+              {/* Animated Progress Bar */}
+              <div className="w-full bg-white/10 rounded-full h-2 mt-4 overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${job.progress}%` }}
+                  transition={{ duration: 1.2, ease: "easeOut" }}
+                  className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-400 rounded-full"
+                />
+              </div>
             </div>
 
             <div className="flex items-center gap-3">
-              {job.status === "rendered" && (
-                <span className="flex items-center gap-1 px-2.5 py-1 bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/20 text-xs font-medium">
-                  <CheckCircle2 size={14} /> Concluído
-                </span>
-              )}
-
-              {job.status === "draft" && (
-                <span className="flex items-center gap-1 px-2.5 py-1 bg-amber-500/10 text-amber-400 rounded-full border border-amber-500/20 text-xs font-medium">
-                  <Clock size={14} /> Na Fila
-                </span>
-              )}
-
-              {job.status === "error" && (
-                <div className="flex items-center gap-2">
-                  <span className="flex items-center gap-1 px-2.5 py-1 bg-rose-500/10 text-rose-400 rounded-full border border-rose-500/20 text-xs font-medium">
-                    <AlertTriangle size={14} /> Erro
-                  </span>
-                  <button
-                    onClick={() => handleRetry(job.id)}
-                    className="flex items-center gap-1 px-2.5 py-1 bg-background hover:bg-border text-gray-200 border border-border rounded-lg text-xs font-medium transition"
-                  >
-                    <RefreshCw size={14} /> Retentar
-                  </button>
-                </div>
+              {job.status === "completed" ? (
+                <ModernButton variant="success" size="sm">
+                  <CheckCircle2 size={16} /> Ver Vídeo
+                </ModernButton>
+              ) : (
+                <ModernButton variant="secondary" size="sm">
+                  <RotateCcw size={14} /> Reenviar
+                </ModernButton>
               )}
             </div>
-          </div>
+          </motion.div>
         ))}
       </div>
     </div>
