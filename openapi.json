@@ -1,0 +1,106 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Viral Vertical Videos Creator API",
+    "version": "2.0.0",
+    "description": "Especificação da API REST Serverless para a plataforma Web SaaS de automação de vídeos verticais."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000/api",
+      "description": "Servidor Local de Desenvolvimento"
+    },
+    {
+      "url": "https://viralcreator.app/api",
+      "description": "Servidor de Produção (Vercel)"
+    }
+  ],
+  "paths": {
+    "/trends/search": {
+      "post": {
+        "summary": "Busca tendências virais com Virality Score e cache Redis",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tema": { "type": "string", "example": "GTA 6" },
+                  "source": { "type": "string", "example": "all" },
+                  "idioma": { "type": "string", "example": "pt" },
+                  "pais": { "type": "string", "example": "BR" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Lista de tendências retornada com sucesso" }
+        }
+      }
+    },
+    "/projects": {
+      "get": {
+        "summary": "Lista todos os projetos ativos do usuário",
+        "responses": {
+          "200": { "description": "Lista de projetos retornada" }
+        }
+      },
+      "post": {
+        "summary": "Cria um novo projeto e gera automaticamente as 5 pastas no S3",
+        "responses": {
+          "200": { "description": "Projeto criado com sucesso" }
+        }
+      }
+    },
+    "/ideas/generate": {
+      "post": {
+        "summary": "Gera 10 ideias virais com contexto RAG e Orquestrador Multi-LLM",
+        "responses": {
+          "200": { "description": "10 ideias geradas e salvas no banco com status pending" }
+        }
+      }
+    },
+    "/ideas/produce": {
+      "post": {
+        "summary": "Converte ideias marcadas em roteiros completos com SEO e enfileira render",
+        "responses": {
+          "200": { "description": "Vídeos colocados na fila de renderização" }
+        }
+      }
+    },
+    "/render/job": {
+      "post": {
+        "summary": "Enfileira job de renderização no BullMQ em Redis",
+        "responses": {
+          "200": { "description": "Job adicionado à fila" }
+        }
+      }
+    },
+    "/youtube/schedule": {
+      "post": {
+        "summary": "Agenda publicação com validação de janela segura (06h-22h)",
+        "responses": {
+          "200": { "description": "Vídeo agendado no YouTube Shorts" }
+        }
+      }
+    },
+    "/youtube/batch-schedule": {
+      "post": {
+        "summary": "Distribui lote de vídeos em ritmo inteligente (ex: 2 vídeos/dia)",
+        "responses": {
+          "200": { "description": "Lote agendado com intervalo ideal" }
+        }
+      }
+    },
+    "/dashboard": {
+      "get": {
+        "summary": "Retorna métricas consolidadas do usuário",
+        "responses": {
+          "200": { "description": "Métricas retornadas" }
+        }
+      }
+    }
+  }
+}

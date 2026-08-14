@@ -1,0 +1,285 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// -----------------------------------------------------
+// 1. Model: User (Autenticação, Stripe e Créditos)
+// -----------------------------------------------------
+model User {
+  id               String           @id @default(cuid())
+  email            String           @unique
+  passwordHash     String?          @map("password_hash")
+  name             String
+  avatar           String?
+  plan             String           @default("free") // "free" | "pro" | "enterprise"
+  stripeId         String?          @map("stripe_id")
+  credits          Int              @default(50)
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  deletedAt        DateTime?        @map("deleted_at")
+
+  projects         Project[]
+  voices           Voice[]
+  subscriptions    Subscription[]
+  youtubeAccounts  YoutubeAccount[]
+  jobQueues        JobQueue[]
+  apiUsages        ApiUsage[]
+
+  @@index([email])
+  @@index([stripeId])
+  @@map("users")
+}
+
+// -----------------------------------------------------
+// 2. Model: Voice (Vozes Clonadas XTTS / Edge TTS)
+// -----------------------------------------------------
+model Voice {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String
+  sampleUrl   String    @map("sample_url")
+  voiceModel  String?   @map("voice_model")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  projects    Project[]
+
+  @@index([userId])
+  @@map("voices")
+}
+
+// -----------------------------------------------------
+// 3. Model: Project (Gerenciamento de Projetos e Presets)
+// -----------------------------------------------------
+model Project {
+  id            String          @id @default(cuid())
+  userId        String          @map("user_id")
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name          String
+  niche         String
+  theme         String
+  language      String          @default("pt")
+  country       String          @default("BR")
+
+  durationMin   Int             @default(25) @map("duration_min")
+  durationMax   Int             @default(40) @map("duration_max")
+
+  format        String          @default("9:16") // "9:16" | "16:9"
+  promptMaster  String          @map("prompt_master")
+  template      String          @default("breaking_news")
+
+  voiceType     String          @default("edge_tts") @map("voice_type") // "edge_tts" | "xtts"
+  voiceId       String?         @map("voice_id")
+  voice         Voice?          @relation(fields: [voiceId], references: [id])
+
+  headlineColor String          @default("yellow") @map("headline_color") // "yellow" | "lime" | "orange" | "red" | "white"
+  ctaText       String?         @map("cta_text")
+
+  musicMode     String          @default("random") @map("music_mode") // "random" | "fixed"
+  musicVolume   Float           @default(0.30) @map("music_volume")
+
+  folders       ProjectFolder[]
+  documents     DocumentIndex[]
+  ideas         Idea[]
+  videos        Video[]
+  jobQueues     JobQueue[]
+
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+  deletedAt     DateTime?       @map("deleted_at")
+
+  @@index([userId])
+  @@index([niche])
+  @@index([deletedAt])
+  @@map("projects")
+}
+
+// -----------------------------------------------------
+// 4. Model: ProjectFolder (Mapeamento S3 Multi-Tenant)
+// -----------------------------------------------------
+model ProjectFolder {
+  id        String   @id @default(cuid())
+  projectId String   @map("project_id")
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  type      String   // "videos" | "music" | "knowledge" | "output" | "cta"
+  s3Path    String   @map("s3_path")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([projectId])
+  @@map("project_folders")
+}
+
+// -----------------------------------------------------
+// 5. Model: DocumentIndex (RAG Embeddings Storage)
+// -----------------------------------------------------
+model DocumentIndex {
+  id          String   @id @default(cuid())
+  projectId   String   @map("project_id")
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  filepath    String
+  fileHash    String   @map("file_hash")
+  fileType    String   @map("file_type") // "txt" | "pdf" | "docx" | "transcript"
+  chunksCount Int      @default(0) @map("chunks_count")
+
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([projectId])
+  @@index([fileHash])
+  @@map("document_indexes")
+}
+
+// -----------------------------------------------------
+// 6. Model: Idea (Geração de Ideias Virais)
+// -----------------------------------------------------
+model Idea {
+  id          String   @id @default(cuid())
+  projectId   String   @map("project_id")
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String
+
+  status      String   @default("pending") // "pending" | "selected" | "producing" | "completed" | "error"
+
+  videos      Video[]
+
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([projectId])
+  @@index([status])
+  @@map("ideas")
+}
+
+// -----------------------------------------------------
+// 7. Model: Video (Produção e Renderização MP4)
+// -----------------------------------------------------
+model Video {
+  id             String    @id @default(cuid())
+  projectId      String    @map("project_id")
+  project        Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  ideaId         String    @map("idea_id")
+  idea           Idea      @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  title          String
+  description    String
+  tags           String    // JSON string array
+
+  status         String    @default("draft") // "draft" | "rendering" | "rendered" | "scheduled" | "published" | "error"
+  progress       Int       @default(0)
+
+  videoUrl       String?   @map("video_url")
+  thumbnailUrl   String?   @map("thumbnail_url")
+
+  youtubeVideoId String?   @map("youtube_video_id")
+  scheduledAt    DateTime? @map("scheduled_at")
+  publishedAt    DateTime? @map("published_at")
+
+  errorMessage   String?   @map("error_message")
+
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@index([projectId])
+  @@index([ideaId])
+  @@index([status])
+  @@index([scheduledAt])
+  @@map("videos")
+}
+
+// -----------------------------------------------------
+// 8. Model: JobQueue (BullMQ Job Tracking & Persistence)
+// -----------------------------------------------------
+model JobQueue {
+  id           String    @id @default(cuid())
+  userId       String    @map("user_id")
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  projectId    String?   @map("project_id")
+  project      Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  jobType      String    @map("job_type") // "index_material" | "render_video" | "publish_youtube"
+  status       String    @default("pending") // "pending" | "processing" | "completed" | "failed"
+  priority     Int       @default(10)
+  payload      String    // JSON string payload
+  attempts     Int       @default(0)
+  maxAttempts  Int       @default(3) @map("max_attempts")
+  errorMessage String?   @map("error_message")
+
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([status])
+  @@index([jobType])
+  @@map("job_queues")
+}
+
+// -----------------------------------------------------
+// 9. Model: ApiUsage (Cost Tracking & Usage Metrics)
+// -----------------------------------------------------
+model ApiUsage {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  provider    String   // "openrouter" | "openai" | "gemini" | "assembly_ai"
+  endpoint    String
+  tokensUsed  Int      @default(0) @map("tokens_used")
+  costUsd     Float    @default(0.0) @map("cost_usd")
+
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([provider])
+  @@map("api_usages")
+}
+
+// -----------------------------------------------------
+// 10. Model: Subscription (Monetização Stripe)
+// -----------------------------------------------------
+model Subscription {
+  id                   String   @id @default(cuid())
+  userId               String   @map("user_id")
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  stripeCustomerId     String   @map("stripe_customer_id")
+  stripeSubscriptionId String   @unique @map("stripe_subscription_id")
+  stripePriceId        String   @map("stripe_price_id")
+  status               String   // "active" | "canceled" | "past_due"
+  currentPeriodEnd     DateTime @map("current_period_end")
+
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("subscriptions")
+}
+
+// -----------------------------------------------------
+// 11. Model: YoutubeAccount (Google OAuth 2.0)
+// -----------------------------------------------------
+model YoutubeAccount {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  channelId    String   @map("channel_id")
+  channelTitle String   @map("channel_title")
+  refreshToken String   @map("refresh_token") // Encrypted AES-256
+
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("youtube_accounts")
+}

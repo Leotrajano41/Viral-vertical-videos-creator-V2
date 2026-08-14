@@ -1,0 +1,19 @@
+import { NextResponse } from "next/server";
+
+export async function POST() {
+  const response = NextResponse.json({
+    status: "SUCCESS",
+    message: "Logout realizado com sucesso",
+  });
+
+  // Clear HTTP-Only auth_token cookie
+  response.cookies.set({
+    name: "auth_token",
+    value: "",
+    httpOnly: true,
+    expires: new Date(0),
+    path: "/",
+  });
+
+  return response;
+}
