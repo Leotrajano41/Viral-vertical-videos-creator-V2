@@ -4,8 +4,8 @@ const ALGORITHM = "aes-256-cbc";
 const IV_LENGTH = 16;
 
 function getEncryptionKey(): Buffer {
-  const key = process.env.AES_SECRET_KEY || "006552e14574a3c1047ccf8e5553a7e9";
-  // AES-256 requires a 32-byte key. Our hex key is hashed to derive 32 bytes safely.
+  const key = process.env.ENCRYPTION_KEY || process.env.AES_SECRET_KEY || "006552e14574a3c1047ccf8e5553a7e9";
+  // AES-256 requires a 32-byte key. Our key is hashed to derive 32 bytes safely.
   return crypto.createHash("sha256").update(key).digest();
 }
 
