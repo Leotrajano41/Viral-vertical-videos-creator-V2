@@ -159,6 +159,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
             {/* Notification Bell & Profile Avatar */}
             <div className="flex items-center gap-4">
+              <Link href="/onboarding">
+                <button className="px-3 py-1.5 rounded-xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-600/30 text-xs font-semibold flex items-center gap-1.5 transition">
+                  <Sparkles size={14} className="text-amber-400" /> Guia de Setup (10 Passos)
+                </button>
+              </Link>
+
               <button className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:text-white hover:bg-white/10 transition relative">
                 <Bell size={18} />
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
