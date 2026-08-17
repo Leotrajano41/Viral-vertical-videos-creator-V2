@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { motion } from "framer-motion";
+import React, { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Settings,
   Cpu,
@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   HardDrive,
   CheckCircle2,
+  XCircle,
   Save,
   Upload,
   Download,
@@ -18,8 +19,201 @@ import {
   RotateCcw,
   Sparkles,
   Info,
+  Eye,
+  EyeOff,
+  TestTube2,
+  Loader2,
 } from "lucide-react";
 import { ModernButton } from "@/components/ui/modern/Button";
+
+interface ApiKeyFieldProps {
+  provider: string;
+  keyName: string;
+  label: string;
+  description: string;
+  placeholder: string;
+  initialActive: boolean;
+  maskedValue: string;
+  onRefresh: () => void;
+}
+
+function ApiKeyRow({
+  provider,
+  keyName,
+  label,
+  description,
+  placeholder,
+  initialActive,
+  maskedValue,
+  onRefresh,
+}: ApiKeyFieldProps) {
+  const [value, setValue] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isActive, setIsActive] = useState(initialActive);
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [saveFeedback, setSaveFeedback] = useState<{ success: boolean; msg: string } | null>(null);
+  const [testFeedback, setTestFeedback] = useState<{ success: boolean; msg: string } | null>(null);
+
+  useEffect(() => {
+    setIsActive(initialActive);
+  }, [initialActive]);
+
+  const handleSave = async () => {
+    if (!value.trim()) {
+      setSaveFeedback({ success: false, msg: "✗ Por favor, insira uma chave antes de salvar." });
+      return;
+    }
+    setSaving(true);
+    setSaveFeedback(null);
+    setTestFeedback(null);
+    try {
+      const res = await fetch("/api/settings/api-keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider, apiKey: value.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSaveFeedback({ success: true, msg: `✓ Chave ${label} salva com sucesso!` });
+        setIsActive(true);
+        setValue("");
+        onRefresh();
+      } else {
+        setSaveFeedback({ success: false, msg: data.error || "✗ Falha ao salvar. Verifique a chave." });
+      }
+    } catch {
+      setSaveFeedback({ success: false, msg: "✗ Falha ao salvar. Verifique a chave." });
+    }
+    setSaving(false);
+  };
+
+  const handleTest = async () => {
+    setTesting(true);
+    setSaveFeedback(null);
+    setTestFeedback(null);
+    try {
+      const res = await fetch("/api/settings/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: keyName }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTestFeedback({ success: true, msg: "✓ Chave válida!" });
+        setIsActive(true);
+      } else {
+        setTestFeedback({ success: false, msg: data.message || "✗ Chave inválida ou serviço indisponível" });
+      }
+    } catch {
+      setTestFeedback({ success: false, msg: "✗ Chave inválida ou serviço indisponível" });
+    }
+    setTesting(false);
+  };
+
+  return (
+    <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10 hover:border-white/15 transition space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <span className="font-bold text-white text-xs block">{label}</span>
+          <span className="text-[11px] text-gray-400">{description}</span>
+        </div>
+
+        {isActive ? (
+          <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-extrabold border border-emerald-500/30 flex items-center gap-1">
+            <CheckCircle2 size={12} /> ✓ Ativo
+          </span>
+        ) : (
+          <span className="px-2.5 py-1 rounded-full bg-rose-500/15 text-rose-400 text-[10px] font-extrabold border border-rose-500/30 flex items-center gap-1">
+            <XCircle size={12} /> ✗ Não configurada
+          </span>
+        )}
+      </div>
+
+      {isActive && maskedValue && (
+        <p className="text-[11px] font-mono text-gray-500">
+          Chave salva: <span className="text-gray-300">{maskedValue}</span>
+        </p>
+      )}
+
+      <div className="flex gap-2">
+        <div className="flex-1 relative">
+          <input
+            type={showPassword ? "text" : "password"}
+            value={value}
+            maxLength={256}
+            onChange={(e) => {
+              setValue(e.target.value);
+              setSaveFeedback(null);
+              setTestFeedback(null);
+            }}
+            placeholder={placeholder}
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 font-mono"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition"
+          >
+            {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+          </button>
+        </div>
+
+        <ModernButton
+          variant="primary"
+          size="sm"
+          onClick={handleSave}
+          disabled={saving || !value.trim()}
+        >
+          {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+          Salvar
+        </ModernButton>
+
+        <button
+          type="button"
+          onClick={handleTest}
+          disabled={testing}
+          className="px-3 py-2 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-400 border border-cyan-500/30 text-xs font-semibold flex items-center gap-1.5 transition disabled:opacity-40"
+        >
+          {testing ? <Loader2 size={14} className="animate-spin" /> : <TestTube2 size={14} />}
+          Testar
+        </button>
+      </div>
+
+      <AnimatePresence>
+        {(saveFeedback || testFeedback) && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="space-y-1"
+          >
+            {saveFeedback && (
+              <p
+                className={`text-[11px] font-semibold flex items-center gap-1 ${
+                  saveFeedback.success ? "text-emerald-400" : "text-rose-400"
+                }`}
+              >
+                {saveFeedback.success ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
+                {saveFeedback.msg}
+              </p>
+            )}
+            {testFeedback && (
+              <p
+                className={`text-[11px] font-semibold flex items-center gap-1 ${
+                  testFeedback.success ? "text-emerald-400" : "text-rose-400"
+                }`}
+              >
+                {testFeedback.success ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
+                {testFeedback.msg}
+              </p>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 export default function OriginalSettingsPage() {
   // 1. Renderizações simultâneas state
@@ -30,6 +224,14 @@ export default function OriginalSettingsPage() {
   const [cookieMode, setCookieMode] = useState("auto");
   const [cookiePath, setCookiePath] = useState("");
   const [cookieSaved, setCookieSaved] = useState(false);
+
+  // 3. API Keys State
+  const [apiKeysStatus, setApiKeysStatus] = useState<Record<string, { isActive: boolean; maskedKey: string }>>({
+    openai: { isActive: true, maskedKey: "sk-proj-****...389d" },
+    assemblyai: { isActive: true, maskedKey: "aai_****...56kB" },
+    pexels: { isActive: true, maskedKey: "w3_****...id" },
+    pixabay: { isActive: true, maskedKey: "45343...0c0f" },
+  });
 
   // 5. Adicionar minha voz state
   const [customVoiceName, setCustomVoiceName] = useState("");
@@ -43,6 +245,22 @@ export default function OriginalSettingsPage() {
   const [backupDatabase, setBackupDatabase] = useState(true);
   const [backupMetaAI, setBackupMetaAI] = useState(false);
   const [backupMessage, setBackupMessage] = useState("");
+
+  const fetchApiKeysStatus = useCallback(async () => {
+    try {
+      const res = await fetch("/api/settings/api-keys");
+      const data = await res.json();
+      if (data.apiKeys) {
+        setApiKeysStatus(data.apiKeys);
+      }
+    } catch {
+      // Keep defaults
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchApiKeysStatus();
+  }, [fetchApiKeysStatus]);
 
   const handleSaveRender = () => {
     setRenderSaved(true);
@@ -205,68 +423,66 @@ export default function OriginalSettingsPage() {
       </section>
 
       {/* =====================================================
-          3. CHAVES DE API DA SUA CONTA
+          3. CHAVES DE API DA SUA CONTA (EDITÁVEL)
           ===================================================== */}
-      <section className="glass-card rounded-2xl p-6 md:p-8 border border-white/10 space-y-4">
-        <h2 className="text-base font-bold text-blue-400 flex items-center gap-2">
-          <Key size={18} /> Chaves de API da sua conta
-        </h2>
-        <p className="text-xs text-gray-300 leading-relaxed">
-          Trazidas automaticamente do sistema pelo seu serial. Não há entrada manual — o cadastro é feito na plataforma Points.
-        </p>
+      <section className="glass-card rounded-2xl p-6 md:p-8 border border-white/10 space-y-5">
+        <div>
+          <h2 className="text-base font-bold text-blue-400 flex items-center gap-2">
+            <Key size={18} /> Chaves de API da sua conta
+          </h2>
+          <p className="text-xs text-gray-300 leading-relaxed mt-1">
+            Insira suas chaves de API para acessar os serviços de IA, transcrição e mídia. Cada chave será armazenada de forma segura com criptografia AES-256. Você pode atualizar a qualquer momento.
+          </p>
+        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-          <div className="p-3.5 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2.5">
-              <CheckCircle2 size={16} className="text-emerald-400 flex-shrink-0" />
-              <div>
-                <span className="font-bold text-white block">OpenAI (IA)</span>
-                <span className="text-[11px] text-gray-400 font-mono">sk-proj-****...389d</span>
-              </div>
-            </div>
-            <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20">
-              ✓ Ativo
-            </span>
-          </div>
+        <div className="space-y-4 pt-1">
+          {/* 1) OPENAI */}
+          <ApiKeyRow
+            provider="openai"
+            keyName="OPENAI_API_KEY"
+            label="OpenAI (IA) - Geração de conteúdo com IA"
+            description="Motor primário para criação de ideias e roteiros virais"
+            placeholder="sk-proj-..."
+            initialActive={Boolean(apiKeysStatus.openai?.isActive)}
+            maskedValue={apiKeysStatus.openai?.maskedKey || ""}
+            onRefresh={fetchApiKeysStatus}
+          />
 
-          <div className="p-3.5 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2.5">
-              <CheckCircle2 size={16} className="text-emerald-400 flex-shrink-0" />
-              <div>
-                <span className="font-bold text-white block">AssemblyAI (transcrição)</span>
-                <span className="text-[11px] text-gray-400 font-mono">1 arq, 56 kB limit</span>
-              </div>
-            </div>
-            <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20">
-              ✓ Ativo
-            </span>
-          </div>
+          {/* 2) ASSEMBLYAI */}
+          <ApiKeyRow
+            provider="assemblyai"
+            keyName="ASSEMBLY_API_KEY"
+            label="AssemblyAI (transcrição) - Converter áudio em texto"
+            description="Geração de legendas automáticas palavra-por-palavra estilo Karaoke"
+            placeholder="aai_..."
+            initialActive={Boolean(apiKeysStatus.assemblyai?.isActive)}
+            maskedValue={apiKeysStatus.assemblyai?.maskedKey || ""}
+            onRefresh={fetchApiKeysStatus}
+          />
 
-          <div className="p-3.5 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2.5">
-              <CheckCircle2 size={16} className="text-emerald-400 flex-shrink-0" />
-              <div>
-                <span className="font-bold text-white block">Pexels (banco de vídeos)</span>
-                <span className="text-[11px] text-gray-400 font-mono">w3 library identifier</span>
-              </div>
-            </div>
-            <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20">
-              ✓ Ativo
-            </span>
-          </div>
+          {/* 3) PEXELS */}
+          <ApiKeyRow
+            provider="pexels"
+            keyName="PEXELS_API_KEY"
+            label="Pexels (banco de vídeos) - Vídeos stock royalty-free"
+            description="Busca e download automático de clipes B-roll em formato vertical 9:16"
+            placeholder="pexels_..."
+            initialActive={Boolean(apiKeysStatus.pexels?.isActive)}
+            maskedValue={apiKeysStatus.pexels?.maskedKey || ""}
+            onRefresh={fetchApiKeysStatus}
+          />
 
-          <div className="p-3.5 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2.5">
-              <CheckCircle2 size={16} className="text-emerald-400 flex-shrink-0" />
-              <div>
-                <span className="font-bold text-white block">Pixabay (banco de mídia)</span>
-                <span className="text-[11px] text-gray-400 font-mono">45343...0c0f</span>
-              </div>
-            </div>
-            <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20">
-              ✓ Ativo
-            </span>
-          </div>
+          {/* 4) PIXABAY */}
+          <ApiKeyRow
+            provider="pixabay"
+            keyName="PIXABAY_API_KEY"
+            label="Pixabay (banco de mídia) - Fotos e imagens stock"
+            description="Banco secundário para imagens e trilhas sonoras gratuitas"
+            placeholder="pixabay_..."
+            initialActive={Boolean(apiKeysStatus.pixabay?.isActive)}
+            maskedValue={apiKeysStatus.pixabay?.maskedKey || ""}
+            onRefresh={fetchApiKeysStatus}
+          />
         </div>
       </section>
 
