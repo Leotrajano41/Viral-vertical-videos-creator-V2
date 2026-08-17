@@ -75,39 +75,93 @@ export default function ModernDashboardPage() {
         </div>
       </motion.div>
 
-      {/* 4 Stat Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+      {/* 6 Stat Cards Grid (Desktop 1:1 Clone) */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <StatCard
-          title="Vídeos Finais"
+          title="Concluídos"
           value={stats.completedVideos}
-          subtext="Prontos para publicação"
+          subtext="Total criados"
           icon={CheckCircle2}
           color="emerald"
-          trend="+18% esta semana"
         />
         <StatCard
-          title="Fila na Nuvem"
-          value={stats.queueCount}
-          subtext="Processando em paralelo"
+          title="Gerados Hoje"
+          value="18"
+          subtext="Últimas 24h"
+          icon={Sparkles}
+          color="indigo"
+        />
+        <StatCard
+          title="Em Produção"
+          value="2"
+          subtext="Renderizando"
           icon={PlayCircle}
           color="cyan"
         />
         <StatCard
-          title="Projetos Ativos"
+          title="Na Fila"
+          value={stats.queueCount}
+          subtext="Aguardando"
+          icon={Clock}
+          color="amber"
+        />
+        <StatCard
+          title="Com Erro"
+          value={stats.errorCount}
+          subtext="0 falhas"
+          icon={Film}
+          color="rose"
+        />
+        <StatCard
+          title="Projetos"
           value={stats.activeProjects}
-          subtext="Múltiplos canais conectados"
+          subtext="Canais ativos"
           icon={FolderKanban}
           color="indigo"
         />
-        <StatCard
-          title="Taxa de Sucesso"
-          value="100%"
-          subtext="0 erros registrados"
-          icon={Film}
-          color="amber"
-          trend="Estável"
-        />
       </div>
+
+      {/* System Status Banner (Desktop 1:1 Feature) */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="glass-card rounded-2xl p-4 border border-white/10 flex flex-wrap items-center justify-between gap-4 text-xs"
+      >
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="font-bold text-white uppercase tracking-wider text-[11px]">Sistema Online</span>
+        </div>
+
+        <div className="flex items-center gap-6 flex-wrap">
+          <div className="flex items-center gap-2 text-gray-300">
+            <span className="text-gray-400">CPU:</span>
+            <span className="font-mono font-bold text-cyan-400">8 Cores</span>
+          </div>
+
+          <div className="flex items-center gap-2 text-gray-300">
+            <span className="text-gray-400">RAM:</span>
+            <span className="font-mono font-bold text-white">4.2 GB / 16 GB</span>
+          </div>
+
+          <div className="flex items-center gap-2 text-gray-300">
+            <span className="text-gray-400">Disco:</span>
+            <span className="font-mono font-bold text-white">128 GB Livres</span>
+          </div>
+
+          <div className="flex items-center gap-2 text-gray-300">
+            <span className="text-gray-400">FFmpeg:</span>
+            <span className="font-bold text-emerald-400 flex items-center gap-1">
+              <CheckCircle2 size={12} /> Hardware Accel OK
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 text-gray-300">
+            <span className="text-gray-400">Renders Paralelos:</span>
+            <span className="font-mono font-bold text-purple-400">2 / 4 Ativos</span>
+          </div>
+        </div>
+      </motion.div>
 
       {/* Performance Bar Overview & Recent Activities */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

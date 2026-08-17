@@ -13,6 +13,10 @@ import {
   Zap,
   Sparkles,
   Settings,
+  Film,
+  Newspaper,
+  History,
+  Youtube,
 } from "lucide-react";
 
 export const metadata = {
@@ -42,51 +46,79 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </div>
             </div>
 
-            {/* Navigation Menu */}
-            <nav className="space-y-1.5">
+            {/* Navigation Menu (10 items - Desktop 1:1 Clone) */}
+            <nav className="space-y-1">
               <Link
                 href="/"
-                className="flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm font-semibold text-gray-300 hover:text-white hover:bg-white/10 transition-all group"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/10 transition-all group"
               >
-                <LayoutDashboard size={18} className="text-gray-400 group-hover:text-indigo-400 transition" />
+                <LayoutDashboard size={17} className="text-gray-400 group-hover:text-indigo-400 transition" />
                 Dashboard
               </Link>
               <Link
-                href="/discovery"
-                className="flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm font-semibold text-gray-300 hover:text-white hover:bg-white/10 transition-all group"
+                href="/projects"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/10 transition-all group"
               >
-                <Flame size={18} className="text-amber-400 group-hover:scale-110 transition" />
-                Tendências & Descoberta
+                <FolderKanban size={17} className="text-purple-400 group-hover:text-purple-300 transition" />
+                Projetos
               </Link>
               <Link
-                href="/projects"
-                className="flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm font-semibold text-gray-300 hover:text-white hover:bg-white/10 transition-all group"
+                href="/create-videos"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/10 transition-all group"
               >
-                <FolderKanban size={18} className="text-purple-400 group-hover:text-purple-300 transition" />
-                Meus Projetos
+                <Film size={17} className="text-cyan-400 group-hover:scale-110 transition" />
+                Criar Vídeos
+              </Link>
+              <Link
+                href="/trends"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/10 transition-all group"
+              >
+                <Flame size={17} className="text-amber-400 group-hover:scale-110 transition" />
+                Tendências
+              </Link>
+              <Link
+                href="/news"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/10 transition-all group"
+              >
+                <Newspaper size={17} className="text-blue-400 group-hover:text-blue-300 transition" />
+                Notícias
               </Link>
               <Link
                 href="/render-queue"
-                className="flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm font-semibold text-gray-300 hover:text-white hover:bg-white/10 transition-all group"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/10 transition-all group"
               >
-                <PlayCircle size={18} className="text-emerald-400 group-hover:text-emerald-300 transition" />
+                <PlayCircle size={17} className="text-emerald-400 group-hover:text-emerald-300 transition" />
                 Fila de Render
               </Link>
               <Link
-                href="/analytics"
-                className="flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm font-semibold text-gray-300 hover:text-white hover:bg-white/10 transition-all group"
+                href="/history"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/10 transition-all group"
               >
-                <BarChart3 size={18} className="text-cyan-400 group-hover:text-cyan-300 transition" />
+                <History size={17} className="text-rose-400 group-hover:text-rose-300 transition" />
+                Histórico
+              </Link>
+              <Link
+                href="/youtube"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/10 transition-all group"
+              >
+                <Youtube size={17} className="text-red-500 group-hover:scale-110 transition" />
+                YouTube
+              </Link>
+              <Link
+                href="/analytics"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/10 transition-all group"
+              >
+                <BarChart3 size={17} className="text-indigo-400 group-hover:text-indigo-300 transition" />
                 Analytics
               </Link>
 
-              <div className="my-2 border-t border-white/[0.06]" />
+              <div className="my-1.5 border-t border-white/[0.06]" />
 
               <Link
                 href="/settings"
-                className="flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm font-semibold text-gray-300 hover:text-white hover:bg-white/10 transition-all group"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/10 transition-all group"
               >
-                <Settings size={18} className="text-gray-400 group-hover:text-indigo-400 transition" />
+                <Settings size={17} className="text-gray-400 group-hover:text-indigo-400 transition" />
                 Configurações
               </Link>
             </nav>

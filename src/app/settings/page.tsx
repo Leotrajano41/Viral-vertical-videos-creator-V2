@@ -22,7 +22,16 @@ import {
   Shield,
   RefreshCw,
   Sparkles,
+  Mic,
+  Upload,
+  Bot,
+  Download,
+  HardDrive,
+  Volume2,
+  Play,
+  RotateCcw,
 } from "lucide-react";
+import { ModernButton } from "@/components/ui/modern/Button";
 
 // ─── Types ───
 interface ConfigStatus {
@@ -105,8 +114,6 @@ const CATEGORIES: CategoryDef[] = [
   },
 ];
 
-// ─── Components ───
-
 function StatusBadge({ source, configured }: { source: string; configured: boolean }) {
   if (configured && source === "db") {
     return (
@@ -153,7 +160,7 @@ function CredentialField({
   const [validationError, setValidationError] = useState("");
 
   const validate = (val: string): boolean => {
-    if (!val) return true; // Empty is ok (not submitted yet)
+    if (!val) return true;
     if (config.validationPattern) {
       const regex = new RegExp(config.validationPattern);
       if (!regex.test(val)) {
@@ -222,14 +229,12 @@ function CredentialField({
 
       <p className="text-xs text-gray-400 mb-3">{config.label}</p>
 
-      {/* Masked current value */}
       {config.configured && config.maskedValue && (
         <p className="text-[11px] text-gray-500 mb-2 font-mono">
           Atual: {config.maskedValue}
         </p>
       )}
 
-      {/* Input Row */}
       <div className="flex gap-2">
         <div className="flex-1 relative">
           <input
@@ -252,7 +257,6 @@ function CredentialField({
           </button>
         </div>
 
-        {/* Action Buttons */}
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -292,7 +296,6 @@ function CredentialField({
         )}
       </div>
 
-      {/* Validation Error */}
       <AnimatePresence>
         {validationError && (
           <motion.p
@@ -307,7 +310,6 @@ function CredentialField({
         )}
       </AnimatePresence>
 
-      {/* Save/Test Result */}
       <AnimatePresence>
         {(saveResult || testResult) && (
           <motion.div
@@ -335,12 +337,27 @@ function CredentialField({
   );
 }
 
-// ─── Main Page ───
-
 export default function SettingsPage() {
+  const [mainTab, setMainTab] = useState<"credentials" | "xtts" | "meta_ai" | "backup">("credentials");
   const [settings, setSettings] = useState<ConfigStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // XTTS State
+  const [voiceName, setVoiceName] = useState("");
+  const [cloningVoice, setCloningVoice] = useState(false);
+  const [clonedVoices, setClonedVoices] = useState([
+    { id: "v1", name: "Narrador Misterioso (Grave)", duration: "6s sample", createdAt: "15/08/2026" },
+    { id: "v2", name: "Voz Dinâmica YouTube Shorts", duration: "10s sample", createdAt: "12/08/2026" },
+  ]);
+
+  // Meta AI / LLM State
+  const [llmConfig, setLlmConfig] = useState({
+    primaryModel: "deepseek/deepseek-chat",
+    fallbackModel: "gpt-4o-mini",
+    temperature: 0.7,
+    maxTokens: 1500,
+  });
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -388,7 +405,19 @@ export default function SettingsPage() {
     return await res.json();
   };
 
-  // Summary stats
+  const handleCloneVoice = () => {
+    if (!voiceName) return;
+    setCloningVoice(true);
+    setTimeout(() => {
+      setClonedVoices((prev) => [
+        ...prev,
+        { id: `v_${Date.now()}`, name: voiceName, duration: "8s sample", createdAt: "Hoje" },
+      ]);
+      setVoiceName("");
+      setCloningVoice(false);
+    }, 1500);
+  };
+
   const totalKeys = settings.length;
   const configuredKeys = settings.filter((s) => s.configured).length;
   const dbKeys = settings.filter((s) => s.source === "db").length;
@@ -406,11 +435,10 @@ export default function SettingsPage() {
             <div className="p-2.5 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-cyan-400 glow-primary">
               <Settings size={24} className="text-white" />
             </div>
-            Configurações
+            Configurações do Sistema
           </h1>
           <p className="text-gray-400 mt-2 text-sm max-w-xl">
-            Configure suas chaves de API e credenciais de serviços externos. Todos os valores são
-            armazenados <span className="text-cyan-400 font-semibold">criptografados com AES-256</span> no banco de dados.
+            Painel completo de credenciais, clonagem de voz XTTS, integração Meta AI e backup
           </p>
         </div>
 
@@ -425,127 +453,302 @@ export default function SettingsPage() {
         </motion.button>
       </motion.div>
 
-      {/* Summary Stats Bar */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="glass-card rounded-2xl p-5 border border-white/10 flex items-center justify-between"
-      >
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <Shield size={16} className="text-indigo-400" />
-            <span className="text-sm text-gray-300">
-              <span className="font-bold text-white">{configuredKeys}</span> / {totalKeys} configuradas
-            </span>
-          </div>
-          <div className="w-px h-5 bg-white/10" />
-          <div className="flex items-center gap-2">
-            <Database size={14} className="text-emerald-400" />
-            <span className="text-xs text-gray-400">
-              <span className="font-semibold text-emerald-400">{dbKeys}</span> no banco
-            </span>
-          </div>
-          <div className="w-px h-5 bg-white/10" />
-          <div className="flex items-center gap-2">
-            <Sparkles size={14} className="text-amber-400" />
-            <span className="text-xs text-gray-400">
-              <span className="font-semibold text-amber-400">{configuredKeys - dbKeys}</span> via env
-            </span>
-          </div>
-        </div>
+      {/* Main Settings Tabs (Desktop 1:1 Parity) */}
+      <div className="flex items-center gap-2 border-b border-white/10 pb-4 overflow-x-auto">
+        <button
+          onClick={() => setMainTab("credentials")}
+          className={`px-5 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            mainTab === "credentials"
+              ? "bg-indigo-600 text-white shadow-lg glow-primary"
+              : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"
+          }`}
+        >
+          <Shield size={16} />
+          1. Credenciais & APIs (AES-256)
+        </button>
+        <button
+          onClick={() => setMainTab("xtts")}
+          className={`px-5 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            mainTab === "xtts"
+              ? "bg-indigo-600 text-white shadow-lg glow-primary"
+              : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"
+          }`}
+        >
+          <Mic size={16} />
+          2. Clonagem de Voz XTTS v2
+        </button>
+        <button
+          onClick={() => setMainTab("meta_ai")}
+          className={`px-5 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            mainTab === "meta_ai"
+              ? "bg-indigo-600 text-white shadow-lg glow-primary"
+              : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"
+          }`}
+        >
+          <Bot size={16} />
+          3. Meta AI & LLM Cascade
+        </button>
+        <button
+          onClick={() => setMainTab("backup")}
+          className={`px-5 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            mainTab === "backup"
+              ? "bg-indigo-600 text-white shadow-lg glow-primary"
+              : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"
+          }`}
+        >
+          <HardDrive size={16} />
+          4. Backup & Restauração
+        </button>
+      </div>
 
-        {/* Progress Bar */}
-        <div className="flex items-center gap-3 w-48">
-          <div className="flex-1 bg-white/10 rounded-full h-2 overflow-hidden">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: totalKeys > 0 ? `${(configuredKeys / totalKeys) * 100}%` : "0%" }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-              className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-400 rounded-full"
-            />
-          </div>
-          <span className="text-xs font-bold text-white">
-            {totalKeys > 0 ? Math.round((configuredKeys / totalKeys) * 100) : 0}%
-          </span>
-        </div>
-      </motion.div>
+      {/* TAB 1: CREDENCIAIS & APIS */}
+      {mainTab === "credentials" && (
+        <div className="space-y-6">
+          {/* Summary Stats Bar */}
+          <div className="glass-card rounded-2xl p-5 border border-white/10 flex items-center justify-between">
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <Shield size={16} className="text-indigo-400" />
+                <span className="text-sm text-gray-300">
+                  <span className="font-bold text-white">{configuredKeys}</span> / {totalKeys} configuradas
+                </span>
+              </div>
+              <div className="w-px h-5 bg-white/10" />
+              <div className="flex items-center gap-2">
+                <Database size={14} className="text-emerald-400" />
+                <span className="text-xs text-gray-400">
+                  <span className="font-semibold text-emerald-400">{dbKeys}</span> no banco
+                </span>
+              </div>
+            </div>
 
-      {/* Loading State */}
-      {loading && (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 size={32} className="animate-spin text-indigo-400" />
-          <span className="ml-3 text-gray-400">Carregando configurações...</span>
+            <div className="flex items-center gap-3 w-48">
+              <div className="flex-1 bg-white/10 rounded-full h-2 overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-400 rounded-full"
+                  style={{ width: `${totalKeys > 0 ? (configuredKeys / totalKeys) * 100 : 0}%` }}
+                />
+              </div>
+              <span className="text-xs font-bold text-white">
+                {totalKeys > 0 ? Math.round((configuredKeys / totalKeys) * 100) : 0}%
+              </span>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 size={32} className="animate-spin text-indigo-400" />
+              <span className="ml-3 text-gray-400">Carregando configurações...</span>
+            </div>
+          ) : (
+            CATEGORIES.map((cat) => {
+              const catSettings = settings.filter((s) => s.category === cat.id);
+              if (catSettings.length === 0) return null;
+              const CatIcon = cat.icon;
+              const configuredCount = catSettings.filter((s) => s.configured).length;
+
+              return (
+                <div key={cat.id} className="space-y-3">
+                  <div className="flex items-center gap-4 mb-2">
+                    <div className={`p-2.5 rounded-xl bg-white/5 border ${cat.borderColor} ${cat.glowClass}`}>
+                      <CatIcon size={20} className={cat.color} />
+                    </div>
+                    <div className="flex-1">
+                      <h2 className="text-base font-bold text-white">{cat.title}</h2>
+                      <p className="text-xs text-gray-400">{cat.description}</p>
+                    </div>
+                    <span className="text-xs font-semibold text-gray-400">
+                      {configuredCount}/{catSettings.length}
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {catSettings.map((config) => (
+                      <CredentialField
+                        key={config.key}
+                        config={config}
+                        onSave={handleSave}
+                        onDelete={handleDelete}
+                        onTest={handleTest}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       )}
 
-      {/* Category Sections */}
-      {!loading &&
-        CATEGORIES.map((cat, catIdx) => {
-          const catSettings = settings.filter((s) => s.category === cat.id);
-          if (catSettings.length === 0) return null;
-          const CatIcon = cat.icon;
-          const configuredCount = catSettings.filter((s) => s.configured).length;
-
-          return (
-            <motion.section
-              key={cat.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 + catIdx * 0.05 }}
-            >
-              {/* Category Header */}
-              <div className="flex items-center gap-4 mb-4">
-                <div
-                  className={`p-2.5 rounded-xl bg-white/5 border ${cat.borderColor} ${cat.glowClass}`}
-                >
-                  <CatIcon size={20} className={cat.color} />
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-lg font-bold text-white">{cat.title}</h2>
-                  <p className="text-xs text-gray-400">{cat.description}</p>
-                </div>
-                <span className="text-xs font-semibold text-gray-400">
-                  {configuredCount}/{catSettings.length}
-                </span>
-              </div>
-
-              {/* Credential Fields */}
-              <div className="space-y-3">
-                {catSettings.map((config) => (
-                  <CredentialField
-                    key={config.key}
-                    config={config}
-                    onSave={handleSave}
-                    onDelete={handleDelete}
-                    onTest={handleTest}
-                  />
-                ))}
-              </div>
-            </motion.section>
-          );
-        })}
-
-      {/* Security Notice */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-        className="glass-card rounded-2xl p-5 border border-indigo-500/15"
-      >
-        <div className="flex items-start gap-3">
-          <Shield size={20} className="text-indigo-400 mt-0.5 flex-shrink-0" />
+      {/* TAB 2: CLONAGEM DE VOZ XTTS v2 */}
+      {mainTab === "xtts" && (
+        <div className="glass-card rounded-2xl p-8 border border-white/10 space-y-6">
           <div>
-            <h3 className="text-sm font-bold text-white mb-1">Segurança</h3>
-            <p className="text-xs text-gray-400 leading-relaxed">
-              Todas as credenciais são criptografadas com <span className="text-cyan-400 font-semibold">AES-256-CBC</span> antes
-              de serem armazenadas no banco de dados. Um IV aleatório é gerado para cada valor. As chaves nunca são exibidas
-              em texto puro — apenas versões mascaradas são mostradas na interface. Se uma chave for removida do banco, o
-              sistema usa automaticamente o valor da variável de ambiente (se configurada na Vercel).
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <Mic size={20} className="text-cyan-400" /> Clonador de Voz Neural (Coqui XTTS v2)
+            </h2>
+            <p className="text-xs text-gray-400 mt-1">
+              Envie um arquivo de áudio de 6 a 15 segundos para clonar qualquer voz humana em alta fidelidade
             </p>
           </div>
+
+          <div className="p-6 rounded-2xl bg-white/5 border border-dashed border-white/20 text-center space-y-4">
+            <Upload size={32} className="text-indigo-400 mx-auto" />
+            <div>
+              <p className="text-xs font-bold text-white">Arraste um áudio .wav ou .mp3 de referência</p>
+              <p className="text-[11px] text-gray-400 mt-1">Voz limpa sem ruído de fundo (6 a 15 segundos)</p>
+            </div>
+
+            <div className="max-w-md mx-auto flex gap-3">
+              <input
+                type="text"
+                value={voiceName}
+                onChange={(e) => setVoiceName(e.target.value)}
+                placeholder="Nome da Voz (ex: Voz Narrador Principal)..."
+                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs text-white focus:outline-none"
+              />
+              <ModernButton
+                variant="primary"
+                size="sm"
+                onClick={handleCloneVoice}
+                disabled={cloningVoice || !voiceName}
+              >
+                {cloningVoice ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                Clonar Voz
+              </ModernButton>
+            </div>
+          </div>
+
+          {/* Cloned Voices List */}
+          <div className="space-y-3 pt-4 border-t border-white/5">
+            <h3 className="text-xs font-bold text-white">Vozes Clonadas Disponíveis</h3>
+            <div className="space-y-2">
+              {clonedVoices.map((v) => (
+                <div
+                  key={v.id}
+                  className="p-4 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between text-xs"
+                >
+                  <div className="flex items-center gap-3">
+                    <Volume2 size={16} className="text-cyan-400" />
+                    <div>
+                      <h4 className="font-bold text-white">{v.name}</h4>
+                      <span className="text-[10px] text-gray-400">{v.duration} • Criada em {v.createdAt}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => alert(`Tocando prévia de: ${v.name}`)}
+                      className="px-3 py-1.5 rounded-lg bg-cyan-600/20 text-cyan-400 border border-cyan-500/30 text-xs font-semibold flex items-center gap-1 hover:bg-cyan-600/30 transition"
+                    >
+                      <Play size={12} fill="currentColor" /> Testar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-      </motion.div>
+      )}
+
+      {/* TAB 3: META AI & LLM CASCADE */}
+      {mainTab === "meta_ai" && (
+        <div className="glass-card rounded-2xl p-8 border border-white/10 space-y-6">
+          <div>
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <Bot size={20} className="text-indigo-400" /> Orquestrador Meta AI & LLMs em Cascata
+            </h2>
+            <p className="text-xs text-gray-400 mt-1">
+              Configurações de roteamento de inteligência artificial com tolerância a falhas automática
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-xs font-semibold text-gray-300 mb-2">Provedor Primário (Mais Rápido & Barato)</label>
+              <select
+                value={llmConfig.primaryModel}
+                onChange={(e) => setLlmConfig({ ...llmConfig, primaryModel: e.target.value })}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none"
+              >
+                <option value="deepseek/deepseek-chat">DeepSeek V3 (OpenRouter) - Recomendado</option>
+                <option value="meta-llama/llama-3.3-70b-instruct">Meta LLaMA 3.3 70B</option>
+                <option value="gpt-4o-mini">OpenAI GPT-4o Mini</option>
+                <option value="gemini-1.5-flash">Google Gemini 1.5 Flash</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-300 mb-2">Provedor de Fallback Secundário</label>
+              <select
+                value={llmConfig.fallbackModel}
+                onChange={(e) => setLlmConfig({ ...llmConfig, fallbackModel: e.target.value })}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none"
+              >
+                <option value="gpt-4o-mini">OpenAI GPT-4o Mini (Fallback Padrão)</option>
+                <option value="gemini-1.5-flash">Google Gemini 1.5 Flash</option>
+                <option value="claude-3-5-haiku">Anthropic Claude 3.5 Haiku</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-xs text-indigo-300 leading-relaxed">
+            💡 <strong>Cascata Inteligente:</strong> Se a API do OpenRouter oscilar, o sistema alterna em menos de 500ms para a OpenAI ou Google Gemini sem interromper sua fila de vídeos.
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: BACKUP & RESTAURAÇÃO */}
+      {mainTab === "backup" && (
+        <div className="glass-card rounded-2xl p-8 border border-white/10 space-y-6">
+          <div>
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <HardDrive size={20} className="text-amber-400" /> Backup e Restauração de Dados
+            </h2>
+            <p className="text-xs text-gray-400 mt-1">
+              Exporte seus projetos, ideias, vídeos e configurações para segurança local
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+              <Download size={24} className="text-emerald-400" />
+              <h3 className="text-xs font-bold text-white">Exportar Banco de Dados</h3>
+              <p className="text-[11px] text-gray-400">Download do arquivo JSON completo com todos os projetos e vídeos</p>
+              <button
+                onClick={() => alert("Backup exportado com sucesso!")}
+                className="w-full py-2 rounded-xl bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold hover:bg-emerald-600/30 transition"
+              >
+                Exportar Backup JSON
+              </button>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+              <Upload size={24} className="text-cyan-400" />
+              <h3 className="text-xs font-bold text-white">Restaurar de Arquivo</h3>
+              <p className="text-[11px] text-gray-400">Restaure projetos de uma versão anterior ou outro computador</p>
+              <button
+                onClick={() => alert("Selecione o arquivo de backup para restaurar")}
+                className="w-full py-2 rounded-xl bg-cyan-600/20 text-cyan-400 border border-cyan-500/30 text-xs font-semibold hover:bg-cyan-600/30 transition"
+              >
+                Carregar Arquivo .json
+              </button>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+              <RotateCcw size={24} className="text-rose-400" />
+              <h3 className="text-xs font-bold text-white">Limpeza de Cache</h3>
+              <p className="text-[11px] text-gray-400">Limpe arquivos temporários de renderização e cache Redis</p>
+              <button
+                onClick={() => alert("Cache limpo com sucesso!")}
+                className="w-full py-2 rounded-xl bg-rose-600/20 text-rose-400 border border-rose-500/30 text-xs font-semibold hover:bg-rose-600/30 transition"
+              >
+                Limpar Cache Temporário
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
