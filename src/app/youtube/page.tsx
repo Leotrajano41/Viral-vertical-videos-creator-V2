@@ -164,6 +164,25 @@ export default function YouTubePage() {
         </div>
       </div>
 
+      {/* YouTube Cookies Anti-Bot Banner (Original Tool Feature) */}
+      <div className="glass-card rounded-2xl p-6 border border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-red-950/20 to-transparent">
+        <div className="space-y-1">
+          <h3 className="text-xs font-bold text-white flex items-center gap-2">
+            <Shield size={16} className="text-emerald-400" /> Cookies do YouTube (Contorna &quot;Sign in to confirm you&apos;re not a bot&quot;)
+          </h3>
+          <p className="text-[11px] text-gray-400 leading-relaxed max-w-2xl">
+            Quando o YouTube bloqueia downloads ou transcrições de vídeos, o app utiliza automaticamente a sessão do seu navegador ou o arquivo <code className="text-cyan-400 font-mono">cookies.txt</code> para contornar qualquer verificação.
+          </p>
+        </div>
+
+        <a
+          href="/settings"
+          className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-gray-300 hover:text-white transition whitespace-nowrap text-center"
+        >
+          ⚙️ Ajustar Cookies em Configurações →
+        </a>
+      </div>
+
       {/* Batch Scheduling Panel */}
       <div className="glass-card rounded-2xl p-8 border border-white/10 space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-4">
