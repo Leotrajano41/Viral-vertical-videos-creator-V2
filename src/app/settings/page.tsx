@@ -93,13 +93,12 @@ function ApiKeyRow({
     setSaveFeedback(null);
     setTestFeedback(null);
     try {
-      const res = await fetch("/api/settings/test", {
+      const res = await fetch(`/api/settings/api-keys/${provider}/test`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: keyName }),
       });
       const data = await res.json();
-      if (data.success) {
+      if (data.valid || data.success) {
         setTestFeedback({ success: true, msg: "✓ Chave válida!" });
         setIsActive(true);
       } else {

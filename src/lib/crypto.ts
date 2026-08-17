@@ -5,7 +5,7 @@ const IV_LENGTH = 16;
 
 function getEncryptionKey(): Buffer {
   const key = process.env.AES_SECRET_KEY || "006552e14574a3c1047ccf8e5553a7e9";
-  // AES-256 requires a 32-byte key. Our hex key is 16 bytes, so we hash it to get 32 bytes.
+  // AES-256 requires a 32-byte key. Our hex key is hashed to derive 32 bytes safely.
   return crypto.createHash("sha256").update(key).digest();
 }
 
@@ -40,10 +40,38 @@ export function decrypt(ciphertext: string): string {
 }
 
 /**
+ * Encrypts plaintext with a unique IV and returns separate components.
+ */
+export function encryptWithIv(plaintext: string): { encryptedKey: string; encryptionIv: string } {
+  const key = getEncryptionKey();
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+  let encrypted = cipher.update(plaintext, "utf8", "hex");
+  encrypted += cipher.final("hex");
+  return {
+    encryptedKey: encrypted,
+    encryptionIv: iv.toString("hex"),
+  };
+}
+
+/**
+ * Decrypts ciphertext given an explicit IV.
+ */
+export function decryptWithIv(encryptedKey: string, encryptionIv: string): string {
+  const key = getEncryptionKey();
+  const iv = Buffer.from(encryptionIv, "hex");
+  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+  let decrypted = decipher.update(encryptedKey, "hex", "utf8");
+  decrypted += decipher.final("utf8");
+  return decrypted;
+}
+
+/**
  * Masks a credential value for safe display.
  * Shows first 6 and last 4 characters, with **** in between.
  */
 export function maskValue(value: string): string {
+  if (!value) return "";
   if (value.length <= 12) return "****";
   return `${value.slice(0, 6)}****${value.slice(-4)}`;
 }

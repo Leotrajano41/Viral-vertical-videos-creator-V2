@@ -2,11 +2,10 @@ import { NextResponse } from "next/server";
 import {
   setConfigValue,
   getConfigValue,
-  removeConfigValue,
   clearConfigCache,
 } from "@/lib/config-resolver";
 import { prisma } from "@/lib/prisma";
-import { decrypt, maskValue } from "@/lib/crypto";
+import { encryptWithIv, decryptWithIv, maskValue } from "@/lib/crypto";
 
 const PROVIDER_MAP: Record<string, { key: string; category: string; label: string }> = {
   openai: { key: "OPENAI_API_KEY", category: "llm", label: "OpenAI" },
@@ -15,67 +14,161 @@ const PROVIDER_MAP: Record<string, { key: string; category: string; label: strin
   pixabay: { key: "PIXABAY_API_KEY", category: "media", label: "Pixabay" },
 };
 
+async function getOrCreateDefaultUser() {
+  let user = await prisma.user.findFirst();
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        id: "default_user_1",
+        email: "user@viralcreator.ai",
+        name: "Creator",
+        plan: "pro",
+      },
+    });
+  }
+  return user;
+}
+
 /**
  * GET /api/settings/api-keys
- * Returns the active status and masked value of the 4 main API keys.
+ * Returns: Array and Map of keys (safely masked, never in plain text)
  */
 export async function GET() {
   try {
-    const results: Record<string, { isActive: boolean; maskedKey: string }> = {};
+    const user = await getOrCreateDefaultUser();
+    const userKeys = await prisma.userApiKey.findMany({
+      where: { userId: user.id },
+    });
+
+    const keysArray = [];
+    const apiKeysMap: Record<string, { isActive: boolean; maskedKey: string; lastTested: string | null }> = {};
 
     for (const [provider, info] of Object.entries(PROVIDER_MAP)) {
-      const val = await getConfigValue(info.key);
-      const isActive = Boolean(val && val.length > 5 && !val.startsWith("placeholder"));
-      results[provider] = {
+      const userKey = userKeys.find((k) => k.provider.toLowerCase() === provider);
+      let isActive = false;
+      let maskedKey = "";
+      let lastTested: string | null = null;
+
+      if (userKey && userKey.isActive) {
+        isActive = true;
+        try {
+          const decrypted = decryptWithIv(userKey.encryptedKey, userKey.encryptionIv);
+          maskedKey = maskValue(decrypted);
+        } catch {
+          maskedKey = "••••••••••••";
+        }
+        lastTested = userKey.lastTestedAt?.toISOString() || null;
+      } else {
+        // Check fallback from config resolver
+        const fallbackVal = await getConfigValue(info.key);
+        if (fallbackVal && fallbackVal.length > 5 && !fallbackVal.startsWith("placeholder")) {
+          isActive = true;
+          maskedKey = maskValue(fallbackVal);
+        }
+      }
+
+      keysArray.push({
+        provider,
+        label: info.label,
+        status: isActive ? "active" : "inactive",
+        lastTested,
+        maskedKey,
+      });
+
+      apiKeysMap[provider] = {
         isActive,
-        maskedKey: isActive ? maskValue(val) : "",
+        maskedKey,
+        lastTested,
       };
     }
 
-    return NextResponse.json({ status: "SUCCESS", apiKeys: results });
+    return NextResponse.json({
+      success: true,
+      keys: keysArray,
+      apiKeys: apiKeysMap,
+    });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Erro ao buscar chaves" }, { status: 500 });
+    console.error("GET /api/settings/api-keys error:", error);
+    return NextResponse.json(
+      { success: false, error: error.message || "Erro ao buscar chaves" },
+      { status: 500 }
+    );
   }
 }
 
 /**
  * POST /api/settings/api-keys
  * Body: { provider: "openai" | "assemblyai" | "pexels" | "pixabay", apiKey: string }
- * Encrypts and stores the key securely in the database.
+ * Encrypts with AES-256 and unique IV, saving to user_api_keys and app_settings.
  */
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { provider, apiKey } = body;
 
-    if (!provider || !apiKey) {
+    // 1. Validar
+    if (!provider || !apiKey || apiKey.trim() === "") {
       return NextResponse.json(
-        { error: "Os campos 'provider' e 'apiKey' são obrigatórios" },
+        { success: false, error: "Chave API não pode estar vazia" },
         { status: 400 }
       );
     }
 
-    const providerInfo = PROVIDER_MAP[provider.toLowerCase()];
+    const providerKey = provider.toLowerCase();
+    const providerInfo = PROVIDER_MAP[providerKey];
     if (!providerInfo) {
       return NextResponse.json(
-        { error: `Provedor '${provider}' não suportado` },
+        { success: false, error: `Provedor '${provider}' não suportado` },
         { status: 400 }
       );
     }
 
-    // Encrypt and save to database
-    await setConfigValue(providerInfo.key, apiKey.trim(), providerInfo.category);
+    const user = await getOrCreateDefaultUser();
+    const cleanApiKey = apiKey.trim();
+
+    // 2. Criptografar com AES-256 e IV único
+    const { encryptedKey, encryptionIv } = encryptWithIv(cleanApiKey);
+
+    // 3. Salvar no banco (user_api_keys)
+    await prisma.userApiKey.upsert({
+      where: {
+        userId_provider: {
+          userId: user.id,
+          provider: providerKey,
+        },
+      },
+      update: {
+        encryptedKey,
+        encryptionIv,
+        isActive: true,
+        isValid: false,
+        updatedAt: new Date(),
+      },
+      create: {
+        userId: user.id,
+        provider: providerKey,
+        encryptedKey,
+        encryptionIv,
+        isActive: true,
+        isValid: false,
+      },
+    });
+
+    // 4. Salvar também em app_settings para interoperabilidade do config resolver
+    await setConfigValue(providerInfo.key, cleanApiKey, providerInfo.category);
     clearConfigCache();
 
+    // 5. Retornar sucesso seguro
     return NextResponse.json({
-      status: "SUCCESS",
+      success: true,
+      provider: providerKey,
+      maskedKey: maskValue(cleanApiKey),
       message: `✓ Chave ${providerInfo.label} salva com sucesso!`,
-      provider,
     });
   } catch (error: any) {
-    console.error("API Key save error:", error);
+    console.error("POST /api/settings/api-keys error:", error);
     return NextResponse.json(
-      { error: "✗ Falha ao salvar. Verifique a chave." },
+      { success: false, error: "✗ Falha ao salvar. Verifique a chave." },
       { status: 500 }
     );
   }

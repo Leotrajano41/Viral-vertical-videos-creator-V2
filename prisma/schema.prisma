@@ -29,6 +29,7 @@ model User {
   youtubeAccounts  YoutubeAccount[]
   jobQueues        JobQueue[]
   apiUsages        ApiUsage[]
+  userApiKeys      UserApiKey[]
 
   @@index([email])
   @@index([stripeId])
@@ -298,3 +299,25 @@ model AppSetting {
   @@index([category])
   @@map("app_settings")
 }
+
+// -----------------------------------------------------
+// 13. Model: UserApiKey (Armazenamento Seguro de Chaves de API)
+// -----------------------------------------------------
+model UserApiKey {
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider      String    // 'openai', 'assemblyai', 'pexels', 'pixabay'
+  encryptedKey  String    @map("encrypted_key") // AES-256
+  encryptionIv  String    @map("encryption_iv")
+  isActive      Boolean   @default(true) @map("is_active")
+  isValid       Boolean   @default(false) @map("is_valid")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  lastTestedAt  DateTime? @map("last_tested_at")
+
+  @@unique([userId, provider])
+  @@index([userId])
+  @@map("user_api_keys")
+}
+
