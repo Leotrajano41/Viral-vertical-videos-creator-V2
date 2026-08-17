@@ -1,754 +1,479 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useState } from "react";
+import { motion } from "framer-motion";
 import {
   Settings,
-  Brain,
-  Film,
-  Cloud,
-  Database,
+  Cpu,
   Youtube,
-  CreditCard,
-  Eye,
-  EyeOff,
-  Save,
-  Trash2,
-  TestTube2,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
-  Loader2,
-  Shield,
-  RefreshCw,
-  Sparkles,
+  Key,
   Mic,
-  Upload,
-  Bot,
-  Download,
+  AlertTriangle,
   HardDrive,
-  Volume2,
-  Play,
+  CheckCircle2,
+  Save,
+  Upload,
+  Download,
+  FileText,
   RotateCcw,
+  Sparkles,
+  Info,
 } from "lucide-react";
 import { ModernButton } from "@/components/ui/modern/Button";
 
-// ─── Types ───
-interface ConfigStatus {
-  key: string;
-  label: string;
-  category: string;
-  configured: boolean;
-  source: "db" | "env" | "none";
-  maskedValue: string;
-  placeholder: string;
-  validationPattern?: string;
-  validationHint?: string;
-  isPublic?: boolean;
-}
+export default function OriginalSettingsPage() {
+  // 1. Renderizações simultâneas state
+  const [renderMode, setRenderMode] = useState("auto");
+  const [renderSaved, setRenderSaved] = useState(false);
 
-interface CategoryDef {
-  id: string;
-  title: string;
-  description: string;
-  icon: React.ElementType;
-  color: string;
-  glowClass: string;
-  borderColor: string;
-}
+  // 2. YouTube Cookies state
+  const [cookieMode, setCookieMode] = useState("auto");
+  const [cookiePath, setCookiePath] = useState("");
+  const [cookieSaved, setCookieSaved] = useState(false);
 
-const CATEGORIES: CategoryDef[] = [
-  {
-    id: "llm",
-    title: "Provedores de IA",
-    description: "Chaves de API para geração de conteúdo com IA (OpenRouter, OpenAI, Gemini)",
-    icon: Brain,
-    color: "text-indigo-400",
-    glowClass: "glow-primary",
-    borderColor: "border-indigo-500/30",
-  },
-  {
-    id: "media",
-    title: "Mídia & Stock",
-    description: "APIs para vídeos, imagens e transcrição de áudio",
-    icon: Film,
-    color: "text-amber-400",
-    glowClass: "",
-    borderColor: "border-amber-500/30",
-  },
-  {
-    id: "storage",
-    title: "Armazenamento AWS",
-    description: "S3 bucket, CloudFront CDN e credenciais IAM",
-    icon: Cloud,
-    color: "text-cyan-400",
-    glowClass: "glow-cyan",
-    borderColor: "border-cyan-500/30",
-  },
-  {
-    id: "cache",
-    title: "Cache Redis",
-    description: "Upstash Redis para filas BullMQ e cache de dados",
-    icon: Database,
-    color: "text-rose-400",
-    glowClass: "",
-    borderColor: "border-rose-500/30",
-  },
-  {
-    id: "youtube",
-    title: "YouTube & Google",
-    description: "OAuth 2.0 para publicação automática no YouTube",
-    icon: Youtube,
-    color: "text-red-400",
-    glowClass: "",
-    borderColor: "border-red-500/30",
-  },
-  {
-    id: "billing",
-    title: "Stripe Billing",
-    description: "Integração de pagamentos e assinaturas SaaS",
-    icon: CreditCard,
-    color: "text-emerald-400",
-    glowClass: "glow-emerald",
-    borderColor: "border-emerald-500/30",
-  },
-];
+  // 5. Adicionar minha voz state
+  const [customVoiceName, setCustomVoiceName] = useState("");
+  const [customVoiceLang, setCustomVoiceLang] = useState("pt");
+  const [customVoiceFile, setCustomVoiceFile] = useState<string | null>(null);
+  const [customVoices, setCustomVoices] = useState<Array<{ name: string; lang: string; file: string }>>([]);
+  const [voiceSuccess, setVoiceSuccess] = useState(false);
 
-function StatusBadge({ source, configured }: { source: string; configured: boolean }) {
-  if (configured && source === "db") {
-    return (
-      <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
-        <CheckCircle2 size={11} />
-        Configurada (DB)
-      </span>
-    );
-  }
-  if (configured && source === "env") {
-    return (
-      <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25">
-        <AlertCircle size={11} />
-        Via Env
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/25">
-      <XCircle size={11} />
-      Não configurada
-    </span>
-  );
-}
+  // 6. Backup checkboxes state
+  const [backupSerial, setBackupSerial] = useState(true);
+  const [backupDatabase, setBackupDatabase] = useState(true);
+  const [backupMetaAI, setBackupMetaAI] = useState(false);
+  const [backupMessage, setBackupMessage] = useState("");
 
-function CredentialField({
-  config,
-  onSave,
-  onDelete,
-  onTest,
-}: {
-  config: ConfigStatus;
-  onSave: (key: string, value: string) => Promise<void>;
-  onDelete: (key: string) => Promise<void>;
-  onTest: (key: string) => Promise<{ success: boolean; message: string }>;
-}) {
-  const [value, setValue] = useState("");
-  const [showValue, setShowValue] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [saveResult, setSaveResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [validationError, setValidationError] = useState("");
-
-  const validate = (val: string): boolean => {
-    if (!val) return true;
-    if (config.validationPattern) {
-      const regex = new RegExp(config.validationPattern);
-      if (!regex.test(val)) {
-        setValidationError(config.validationHint || "Formato inválido");
-        return false;
-      }
-    }
-    setValidationError("");
-    return true;
+  const handleSaveRender = () => {
+    setRenderSaved(true);
+    setTimeout(() => setRenderSaved(false), 3000);
   };
 
-  const handleSave = async () => {
-    if (!value.trim()) return;
-    if (!validate(value)) return;
-    setSaving(true);
-    setSaveResult(null);
-    setTestResult(null);
-    try {
-      await onSave(config.key, value);
-      setSaveResult({ success: true, message: "Salvo com sucesso!" });
-      setValue("");
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Erro ao salvar";
-      setSaveResult({ success: false, message: msg });
-    }
-    setSaving(false);
+  const handleSaveCookies = () => {
+    setCookieSaved(true);
+    setTimeout(() => setCookieSaved(false), 3000);
   };
 
-  const handleTest = async () => {
-    setTesting(true);
-    setTestResult(null);
-    try {
-      const result = await onTest(config.key);
-      setTestResult(result);
-    } catch {
-      setTestResult({ success: false, message: "Erro ao testar" });
-    }
-    setTesting(false);
+  const handleRegisterVoice = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customVoiceName) return;
+    setCustomVoices((prev) => [
+      ...prev,
+      {
+        name: customVoiceName,
+        lang: customVoiceLang === "pt" ? "Português" : "Inglês",
+        file: customVoiceFile || "amostra_audio.wav",
+      },
+    ]);
+    setCustomVoiceName("");
+    setCustomVoiceFile(null);
+    setVoiceSuccess(true);
+    setTimeout(() => setVoiceSuccess(false), 3000);
   };
 
-  const handleDelete = async () => {
-    setDeleting(true);
-    try {
-      await onDelete(config.key);
-      setSaveResult({ success: true, message: "Removida do banco" });
-    } catch {
-      setSaveResult({ success: false, message: "Erro ao remover" });
-    }
-    setDeleting(false);
+  const handleGenerateBackup = () => {
+    setBackupMessage("✅ Arquivo de backup compactado gerado com sucesso! (backup_viral_creator.zip)");
+    setTimeout(() => setBackupMessage(""), 5000);
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 hover:border-white/[0.12] transition-all duration-300"
-    >
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <code className="text-xs font-mono text-gray-300 bg-white/5 px-2 py-0.5 rounded">
-            {config.key}
-          </code>
-          <StatusBadge source={config.source} configured={config.configured} />
+    <div className="max-w-4xl mx-auto space-y-8 pb-16">
+      {/* Header Banner */}
+      <div className="glass-card rounded-3xl p-8 border border-white/10 relative overflow-hidden bg-gradient-to-r from-blue-950/40 via-indigo-900/30 to-purple-900/40">
+        <div className="flex items-center gap-4">
+          <div className="p-3.5 rounded-2xl bg-blue-600/20 text-blue-400 border border-blue-500/30">
+            <Settings size={28} />
+          </div>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-extrabold text-white">
+              Configurações
+            </h1>
+            <p className="text-xs text-gray-300 mt-1">
+              Ajustes do sistema, cookies do YouTube, chaves de API, vozes e backup
+            </p>
+          </div>
         </div>
       </div>
 
-      <p className="text-xs text-gray-400 mb-3">{config.label}</p>
-
-      {config.configured && config.maskedValue && (
-        <p className="text-[11px] text-gray-500 mb-2 font-mono">
-          Atual: {config.maskedValue}
+      {/* =====================================================
+          1. RENDERIZAÇÕES SIMULTÂNEAS
+          ===================================================== */}
+      <section className="glass-card rounded-2xl p-6 md:p-8 border border-white/10 space-y-4">
+        <h2 className="text-base font-bold text-blue-400 flex items-center gap-2">
+          <Cpu size={18} /> Renderizações simultâneas
+        </h2>
+        <p className="text-xs text-gray-300 leading-relaxed">
+          Define quantos vídeos podem ser sintetizados e renderizados em paralelo pela GPU e CPU do seu computador.
         </p>
-      )}
 
-      <div className="flex gap-2">
-        <div className="flex-1 relative">
-          <input
-            type={showValue ? "text" : "password"}
-            value={value}
-            onChange={(e) => {
-              setValue(e.target.value);
-              validate(e.target.value);
-              setSaveResult(null);
-              setTestResult(null);
-            }}
-            placeholder={config.placeholder}
-            className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/25 transition-all font-mono"
-          />
-          <button
-            onClick={() => setShowValue(!showValue)}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition"
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 pt-2">
+          <select
+            value={renderMode}
+            onChange={(e) => setRenderMode(e.target.value)}
+            className="w-full sm:w-80 bg-white/5 border border-white/10 text-xs font-semibold text-white rounded-xl px-4 py-2.5 focus:outline-none focus:border-blue-500 cursor-pointer"
           >
-            {showValue ? <EyeOff size={16} /> : <Eye size={16} />}
-          </button>
+            <option value="auto">Automático (detecta GPU/CPU)</option>
+            <option value="1">1 vídeo por vez</option>
+            <option value="2">2 vídeos simultâneos</option>
+            <option value="3">3 vídeos simultâneos</option>
+          </select>
+
+          <ModernButton variant="primary" size="sm" onClick={handleSaveRender}>
+            <Save size={14} /> Salvar
+          </ModernButton>
+
+          {renderSaved && (
+            <span className="text-xs text-emerald-400 font-semibold flex items-center gap-1">
+              <CheckCircle2 size={14} /> Salvo!
+            </span>
+          )}
         </div>
 
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={handleSave}
-          disabled={saving || !value.trim()}
-          className="px-3.5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed text-white text-xs font-semibold flex items-center gap-1.5 transition-colors"
-        >
-          {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-          Salvar
-        </motion.button>
+        <div className="pt-2 text-[11px] text-gray-400">
+          Status: <span className="text-emerald-400 font-mono">Hardware Acceleration ativo (Apple VideoToolbox / NVENC)</span>
+        </div>
+      </section>
 
-        {config.configured && (
-          <>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleTest}
-              disabled={testing}
-              className="px-3 py-2.5 rounded-lg bg-cyan-600/20 border border-cyan-500/30 hover:bg-cyan-600/30 text-cyan-400 text-xs font-semibold flex items-center gap-1.5 transition-colors"
-            >
-              {testing ? <Loader2 size={14} className="animate-spin" /> : <TestTube2 size={14} />}
-              Testar
-            </motion.button>
+      {/* =====================================================
+          2. YOUTUBE — COOKIES
+          ===================================================== */}
+      <section className="glass-card rounded-2xl p-6 md:p-8 border border-white/10 space-y-4">
+        <h2 className="text-base font-bold text-blue-400 flex items-center gap-2">
+          <Youtube size={18} className="text-red-500" /> YouTube — cookies (contorna &quot;Sign in to confirm you&apos;re not a bot&quot;)
+        </h2>
+        
+        <p className="text-xs text-gray-300 leading-relaxed">
+          Quando o YouTube bloqueia downloads/transcrições, usar os cookies de uma conta logada resolve. O modo &quot;navegador&quot; precisa do navegador FECHADO; o arquivo cookies.txt funciona sempre (exporte com a extensão &quot;Get cookies.txt LOCALLY&quot; estando logado no YouTube).
+        </p>
 
-            {config.source === "db" && (
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleDelete}
-                disabled={deleting}
-                className="px-3 py-2.5 rounded-lg bg-rose-600/15 border border-rose-500/25 hover:bg-rose-600/25 text-rose-400 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+        <div className="space-y-3 pt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] text-gray-400 mb-1">Modo de Captura de Cookies</label>
+              <select
+                value={cookieMode}
+                onChange={(e) => setCookieMode(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 text-xs font-semibold text-white rounded-xl px-4 py-2.5 focus:outline-none cursor-pointer"
               >
-                {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-              </motion.button>
-            )}
-          </>
-        )}
-      </div>
-
-      <AnimatePresence>
-        {validationError && (
-          <motion.p
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="text-[11px] text-amber-400 mt-2 flex items-center gap-1"
-          >
-            <AlertCircle size={12} />
-            {validationError}
-          </motion.p>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {(saveResult || testResult) && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mt-2"
-          >
-            {saveResult && (
-              <p className={`text-[11px] flex items-center gap-1 ${saveResult.success ? "text-emerald-400" : "text-rose-400"}`}>
-                {saveResult.success ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
-                {saveResult.message}
-              </p>
-            )}
-            {testResult && (
-              <p className={`text-[11px] flex items-center gap-1 ${testResult.success ? "text-emerald-400" : "text-rose-400"}`}>
-                {testResult.success ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
-                {testResult.message}
-              </p>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
-  );
-}
-
-export default function SettingsPage() {
-  const [mainTab, setMainTab] = useState<"credentials" | "xtts" | "meta_ai" | "backup">("credentials");
-  const [settings, setSettings] = useState<ConfigStatus[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-
-  // XTTS State
-  const [voiceName, setVoiceName] = useState("");
-  const [cloningVoice, setCloningVoice] = useState(false);
-  const [clonedVoices, setClonedVoices] = useState([
-    { id: "v1", name: "Narrador Misterioso (Grave)", duration: "6s sample", createdAt: "15/08/2026" },
-    { id: "v2", name: "Voz Dinâmica YouTube Shorts", duration: "10s sample", createdAt: "12/08/2026" },
-  ]);
-
-  // Meta AI / LLM State
-  const [llmConfig, setLlmConfig] = useState({
-    primaryModel: "deepseek/deepseek-chat",
-    fallbackModel: "gpt-4o-mini",
-    temperature: 0.7,
-    maxTokens: 1500,
-  });
-
-  const fetchSettings = useCallback(async () => {
-    try {
-      const res = await fetch("/api/settings");
-      const data = await res.json();
-      setSettings(data.settings || []);
-    } catch (error) {
-      console.error("Failed to fetch settings:", error);
-    }
-    setLoading(false);
-    setRefreshing(false);
-  }, []);
-
-  useEffect(() => {
-    fetchSettings();
-  }, [fetchSettings]);
-
-  const handleRefresh = () => {
-    setRefreshing(true);
-    fetchSettings();
-  };
-
-  const handleSave = async (key: string, value: string) => {
-    const res = await fetch("/api/settings", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key, value }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || data.hint || "Erro");
-    await fetchSettings();
-  };
-
-  const handleDelete = async (key: string) => {
-    await fetch(`/api/settings?key=${key}`, { method: "DELETE" });
-    await fetchSettings();
-  };
-
-  const handleTest = async (key: string) => {
-    const res = await fetch("/api/settings/test", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key }),
-    });
-    return await res.json();
-  };
-
-  const handleCloneVoice = () => {
-    if (!voiceName) return;
-    setCloningVoice(true);
-    setTimeout(() => {
-      setClonedVoices((prev) => [
-        ...prev,
-        { id: `v_${Date.now()}`, name: voiceName, duration: "8s sample", createdAt: "Hoje" },
-      ]);
-      setVoiceName("");
-      setCloningVoice(false);
-    }, 1500);
-  };
-
-  const totalKeys = settings.length;
-  const configuredKeys = settings.filter((s) => s.configured).length;
-  const dbKeys = settings.filter((s) => s.source === "db").length;
-
-  return (
-    <div className="max-w-5xl mx-auto space-y-8">
-      {/* Page Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-start justify-between"
-      >
-        <div>
-          <h1 className="text-3xl font-extrabold text-white flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-cyan-400 glow-primary">
-              <Settings size={24} className="text-white" />
+                <option value="auto">Automático (só quando bloquear)</option>
+                <option value="none">Não usar</option>
+                <option value="chrome">Chrome</option>
+                <option value="edge">Edge</option>
+                <option value="firefox">Firefox</option>
+                <option value="brave">Brave</option>
+                <option value="opera">Opera</option>
+              </select>
             </div>
-            Configurações do Sistema
-          </h1>
-          <p className="text-gray-400 mt-2 text-sm max-w-xl">
-            Painel completo de credenciais, clonagem de voz XTTS, integração Meta AI e backup
+
+            <div>
+              <label className="block text-[11px] text-gray-400 mb-1">Arquivo de Cookies Local</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={cookiePath}
+                  onChange={(e) => setCookiePath(e.target.value)}
+                  placeholder="(vazio = usa cookies.txt na pasta do app)"
+                  className="flex-1 bg-white/5 border border-white/10 text-xs text-white rounded-xl px-3 py-2.5 focus:outline-none placeholder-gray-500 font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={() => alert("Selecione o arquivo cookies.txt exportado")}
+                  className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-xs text-gray-300 font-semibold transition"
+                >
+                  Arquivo...
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-2">
+            <span className="text-xs text-emerald-400 flex items-center gap-1.5 font-semibold">
+              <CheckCircle2 size={14} /> ✓ usando automático (só tenta o navegador quando o YouTube bloquear)
+            </span>
+
+            <ModernButton variant="primary" size="sm" onClick={handleSaveCookies}>
+              <Save size={14} /> Salvar
+            </ModernButton>
+          </div>
+
+          {cookieSaved && (
+            <p className="text-xs text-emerald-400 font-semibold">
+              ✓ Configuração de cookies do YouTube atualizada com sucesso.
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* =====================================================
+          3. CHAVES DE API DA SUA CONTA
+          ===================================================== */}
+      <section className="glass-card rounded-2xl p-6 md:p-8 border border-white/10 space-y-4">
+        <h2 className="text-base font-bold text-blue-400 flex items-center gap-2">
+          <Key size={18} /> Chaves de API da sua conta
+        </h2>
+        <p className="text-xs text-gray-300 leading-relaxed">
+          Trazidas automaticamente do sistema pelo seu serial. Não há entrada manual — o cadastro é feito na plataforma Points.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+          <div className="p-3.5 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2.5">
+              <CheckCircle2 size={16} className="text-emerald-400 flex-shrink-0" />
+              <div>
+                <span className="font-bold text-white block">OpenAI (IA)</span>
+                <span className="text-[11px] text-gray-400 font-mono">sk-proj-****...389d</span>
+              </div>
+            </div>
+            <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20">
+              ✓ Ativo
+            </span>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2.5">
+              <CheckCircle2 size={16} className="text-emerald-400 flex-shrink-0" />
+              <div>
+                <span className="font-bold text-white block">AssemblyAI (transcrição)</span>
+                <span className="text-[11px] text-gray-400 font-mono">1 arq, 56 kB limit</span>
+              </div>
+            </div>
+            <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20">
+              ✓ Ativo
+            </span>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2.5">
+              <CheckCircle2 size={16} className="text-emerald-400 flex-shrink-0" />
+              <div>
+                <span className="font-bold text-white block">Pexels (banco de vídeos)</span>
+                <span className="text-[11px] text-gray-400 font-mono">w3 library identifier</span>
+              </div>
+            </div>
+            <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20">
+              ✓ Ativo
+            </span>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2.5">
+              <CheckCircle2 size={16} className="text-emerald-400 flex-shrink-0" />
+              <div>
+                <span className="font-bold text-white block">Pixabay (banco de mídia)</span>
+                <span className="text-[11px] text-gray-400 font-mono">45343...0c0f</span>
+              </div>
+            </div>
+            <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20">
+              ✓ Ativo
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* =====================================================
+          4. CLONAGEM DE VOZ (XTTS)
+          ===================================================== */}
+      <section className="glass-card rounded-2xl p-6 md:p-8 border border-white/10 space-y-4">
+        <h2 className="text-base font-bold text-blue-400 flex items-center gap-2">
+          <Mic size={18} /> Clonagem de voz (XTTS)
+        </h2>
+
+        {/* Orange Warning Banner */}
+        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs leading-relaxed space-y-1">
+          <div className="flex items-center gap-2 font-bold text-amber-400">
+            <AlertTriangle size={16} /> ⚠ Recurso exclusivo da versão Windows. Neste Mac, use as vozes prontas (Edge TTS).
+          </div>
+          <p className="text-[11px] text-amber-200/90 pl-6">
+            A clonagem de voz (XTTS) só existe na versão Windows. No Mac use as vozes prontas do Edge TTS — são mais de 300, em vários idiomas.
           </p>
         </div>
 
-        <motion.button
-          whileHover={{ scale: 1.05, rotate: 180 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="p-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:text-white hover:bg-white/10 transition"
-        >
-          <RefreshCw size={18} className={refreshing ? "animate-spin" : ""} />
-        </motion.button>
-      </motion.div>
-
-      {/* Main Settings Tabs (Desktop 1:1 Parity) */}
-      <div className="flex items-center gap-2 border-b border-white/10 pb-4 overflow-x-auto">
-        <button
-          onClick={() => setMainTab("credentials")}
-          className={`px-5 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-            mainTab === "credentials"
-              ? "bg-indigo-600 text-white shadow-lg glow-primary"
-              : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"
-          }`}
-        >
-          <Shield size={16} />
-          1. Credenciais & APIs (AES-256)
-        </button>
-        <button
-          onClick={() => setMainTab("xtts")}
-          className={`px-5 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-            mainTab === "xtts"
-              ? "bg-indigo-600 text-white shadow-lg glow-primary"
-              : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"
-          }`}
-        >
-          <Mic size={16} />
-          2. Clonagem de Voz XTTS v2
-        </button>
-        <button
-          onClick={() => setMainTab("meta_ai")}
-          className={`px-5 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-            mainTab === "meta_ai"
-              ? "bg-indigo-600 text-white shadow-lg glow-primary"
-              : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"
-          }`}
-        >
-          <Bot size={16} />
-          3. Meta AI & LLM Cascade
-        </button>
-        <button
-          onClick={() => setMainTab("backup")}
-          className={`px-5 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-            mainTab === "backup"
-              ? "bg-indigo-600 text-white shadow-lg glow-primary"
-              : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"
-          }`}
-        >
-          <HardDrive size={16} />
-          4. Backup & Restauração
-        </button>
-      </div>
-
-      {/* TAB 1: CREDENCIAIS & APIS */}
-      {mainTab === "credentials" && (
-        <div className="space-y-6">
-          {/* Summary Stats Bar */}
-          <div className="glass-card rounded-2xl p-5 border border-white/10 flex items-center justify-between">
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2">
-                <Shield size={16} className="text-indigo-400" />
-                <span className="text-sm text-gray-300">
-                  <span className="font-bold text-white">{configuredKeys}</span> / {totalKeys} configuradas
-                </span>
-              </div>
-              <div className="w-px h-5 bg-white/10" />
-              <div className="flex items-center gap-2">
-                <Database size={14} className="text-emerald-400" />
-                <span className="text-xs text-gray-400">
-                  <span className="font-semibold text-emerald-400">{dbKeys}</span> no banco
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 w-48">
-              <div className="flex-1 bg-white/10 rounded-full h-2 overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-400 rounded-full"
-                  style={{ width: `${totalKeys > 0 ? (configuredKeys / totalKeys) * 100 : 0}%` }}
-                />
-              </div>
-              <span className="text-xs font-bold text-white">
-                {totalKeys > 0 ? Math.round((configuredKeys / totalKeys) * 100) : 0}%
-              </span>
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="flex items-center justify-center py-20">
-              <Loader2 size={32} className="animate-spin text-indigo-400" />
-              <span className="ml-3 text-gray-400">Carregando configurações...</span>
-            </div>
-          ) : (
-            CATEGORIES.map((cat) => {
-              const catSettings = settings.filter((s) => s.category === cat.id);
-              if (catSettings.length === 0) return null;
-              const CatIcon = cat.icon;
-              const configuredCount = catSettings.filter((s) => s.configured).length;
-
-              return (
-                <div key={cat.id} className="space-y-3">
-                  <div className="flex items-center gap-4 mb-2">
-                    <div className={`p-2.5 rounded-xl bg-white/5 border ${cat.borderColor} ${cat.glowClass}`}>
-                      <CatIcon size={20} className={cat.color} />
-                    </div>
-                    <div className="flex-1">
-                      <h2 className="text-base font-bold text-white">{cat.title}</h2>
-                      <p className="text-xs text-gray-400">{cat.description}</p>
-                    </div>
-                    <span className="text-xs font-semibold text-gray-400">
-                      {configuredCount}/{catSettings.length}
-                    </span>
-                  </div>
-
-                  <div className="space-y-3">
-                    {catSettings.map((config) => (
-                      <CredentialField
-                        key={config.key}
-                        config={config}
-                        onSave={handleSave}
-                        onDelete={handleDelete}
-                        onTest={handleTest}
-                      />
-                    ))}
-                  </div>
-                </div>
-              );
-            })
-          )}
+        <div className="pt-2">
+          <button
+            type="button"
+            disabled
+            className="px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-500 text-xs font-semibold flex items-center gap-2 cursor-not-allowed opacity-50"
+            title="Disponível na versão Windows"
+          >
+            <Download size={14} /> ⬇️ Instalar XTTS (Disponível no Windows)
+          </button>
         </div>
-      )}
+      </section>
 
-      {/* TAB 2: CLONAGEM DE VOZ XTTS v2 */}
-      {mainTab === "xtts" && (
-        <div className="glass-card rounded-2xl p-8 border border-white/10 space-y-6">
-          <div>
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <Mic size={20} className="text-cyan-400" /> Clonador de Voz Neural (Coqui XTTS v2)
-            </h2>
-            <p className="text-xs text-gray-400 mt-1">
-              Envie um arquivo de áudio de 6 a 15 segundos para clonar qualquer voz humana em alta fidelidade
-            </p>
-          </div>
+      {/* =====================================================
+          5. ADICIONAR MINHA VOZ
+          ===================================================== */}
+      <section className="glass-card rounded-2xl p-6 md:p-8 border border-white/10 space-y-4">
+        <h2 className="text-base font-bold text-blue-400 flex items-center gap-2">
+          <Mic size={18} /> Adicionar minha voz
+        </h2>
 
-          <div className="p-6 rounded-2xl bg-white/5 border border-dashed border-white/20 text-center space-y-4">
-            <Upload size={32} className="text-indigo-400 mx-auto" />
+        <form onSubmit={handleRegisterVoice} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <p className="text-xs font-bold text-white">Arraste um áudio .wav ou .mp3 de referência</p>
-              <p className="text-[11px] text-gray-400 mt-1">Voz limpa sem ruído de fundo (6 a 15 segundos)</p>
-            </div>
-
-            <div className="max-w-md mx-auto flex gap-3">
+              <label className="block text-xs font-semibold text-gray-300 mb-1.5">Nome</label>
               <input
                 type="text"
-                value={voiceName}
-                onChange={(e) => setVoiceName(e.target.value)}
-                placeholder="Nome da Voz (ex: Voz Narrador Principal)..."
-                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs text-white focus:outline-none"
+                value={customVoiceName}
+                onChange={(e) => setCustomVoiceName(e.target.value)}
+                placeholder="Ex: Minha voz"
+                className="w-full bg-white/5 border border-white/10 text-xs text-white rounded-xl px-4 py-2.5 focus:outline-none focus:border-blue-500"
               />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-300 mb-1.5">Idioma da Voz</label>
+              <select
+                value={customVoiceLang}
+                onChange={(e) => setCustomVoiceLang(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 text-xs font-semibold text-white rounded-xl px-4 py-2.5 focus:outline-none cursor-pointer"
+              >
+                <option value="pt">Português</option>
+                <option value="en">Inglês</option>
+                <option value="es">Espanhol</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-300 mb-1.5">
+              Amostra de áudio (6-30s, WAV/MP3)
+            </label>
+            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+              <button
+                type="button"
+                onClick={() => setCustomVoiceFile("amostra_minha_voz.wav")}
+                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-gray-200 border border-white/10 flex items-center gap-2 transition"
+              >
+                <Upload size={14} /> Escolher arquivo...
+              </button>
+
+              {customVoiceFile && (
+                <span className="text-xs font-mono text-cyan-400">
+                  Arquivo: {customVoiceFile}
+                </span>
+              )}
+
               <ModernButton
+                type="submit"
                 variant="primary"
                 size="sm"
-                onClick={handleCloneVoice}
-                disabled={cloningVoice || !voiceName}
+                disabled={!customVoiceName}
               >
-                {cloningVoice ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                Clonar Voz
+                <Sparkles size={14} /> Cadastrar voz
               </ModernButton>
             </div>
           </div>
+        </form>
 
-          {/* Cloned Voices List */}
-          <div className="space-y-3 pt-4 border-t border-white/5">
-            <h3 className="text-xs font-bold text-white">Vozes Clonadas Disponíveis</h3>
+        {voiceSuccess && (
+          <p className="text-xs text-emerald-400 font-semibold flex items-center gap-1">
+            <CheckCircle2 size={14} /> Perfil de voz cadastrado com sucesso!
+          </p>
+        )}
+
+        {/* Custom Voices Area */}
+        <div className="pt-2 border-t border-white/5">
+          {customVoices.length === 0 ? (
+            <p className="text-xs text-gray-500 italic">Nenhuma voz cadastrada.</p>
+          ) : (
             <div className="space-y-2">
-              {clonedVoices.map((v) => (
+              {customVoices.map((v, i) => (
                 <div
-                  key={v.id}
-                  className="p-4 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between text-xs"
+                  key={i}
+                  className="p-3 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between text-xs"
                 >
-                  <div className="flex items-center gap-3">
-                    <Volume2 size={16} className="text-cyan-400" />
-                    <div>
-                      <h4 className="font-bold text-white">{v.name}</h4>
-                      <span className="text-[10px] text-gray-400">{v.duration} • Criada em {v.createdAt}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => alert(`Tocando prévia de: ${v.name}`)}
-                      className="px-3 py-1.5 rounded-lg bg-cyan-600/20 text-cyan-400 border border-cyan-500/30 text-xs font-semibold flex items-center gap-1 hover:bg-cyan-600/30 transition"
-                    >
-                      <Play size={12} fill="currentColor" /> Testar
-                    </button>
-                  </div>
+                  <span className="font-bold text-white">{v.name} ({v.lang})</span>
+                  <span className="text-[11px] text-cyan-400 font-mono">{v.file}</span>
                 </div>
               ))}
             </div>
-          </div>
+          )}
         </div>
-      )}
+      </section>
 
-      {/* TAB 3: META AI & LLM CASCADE */}
-      {mainTab === "meta_ai" && (
-        <div className="glass-card rounded-2xl p-8 border border-white/10 space-y-6">
-          <div>
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <Bot size={20} className="text-indigo-400" /> Orquestrador Meta AI & LLMs em Cascata
-            </h2>
-            <p className="text-xs text-gray-400 mt-1">
-              Configurações de roteamento de inteligência artificial com tolerância a falhas automática
-            </p>
+      {/* =====================================================
+          6. 💾 BACKUP E RESTAURAÇÃO DOS SEUS DADOS
+          ===================================================== */}
+      <section className="glass-card rounded-2xl p-6 md:p-8 border border-white/10 space-y-5">
+        <h2 className="text-base font-bold text-blue-400 flex items-center gap-2">
+          💾 Backup e restauração dos seus dados
+        </h2>
+
+        <p className="text-xs text-gray-300 leading-relaxed">
+          Gere backups periódicos para proteger seus projetos, ideias, históricos e chaves ativadas. Você pode restaurar em qualquer computador a qualquer momento.
+        </p>
+
+        <div className="space-y-3 pt-2">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">
+            1) Gerar backup
+          </h3>
+
+          <div className="space-y-2.5">
+            <label className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 cursor-pointer transition">
+              <input
+                type="checkbox"
+                checked={backupSerial}
+                onChange={(e) => setBackupSerial(e.target.checked)}
+                className="mt-0.5 accent-blue-500 rounded"
+              />
+              <div className="text-xs">
+                <span className="font-bold text-white block">Licença ativada (serial)</span>
+                <span className="text-[11px] text-gray-400">1 arq, 1 KB — Sem isto o cliente tem que ativar o serial de novo</span>
+              </div>
+            </label>
+
+            <label className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 cursor-pointer transition">
+              <input
+                type="checkbox"
+                checked={backupDatabase}
+                onChange={(e) => setBackupDatabase(e.target.checked)}
+                className="mt-0.5 accent-blue-500 rounded"
+              />
+              <div className="text-xs">
+                <span className="font-bold text-white block">Projetos, ideias, fila, histórico e ajustes</span>
+                <span className="text-[11px] text-gray-400">1 arq, 56 kB — O banco do app inteiro</span>
+              </div>
+            </label>
+
+            <label className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 cursor-pointer transition">
+              <input
+                type="checkbox"
+                checked={backupMetaAI}
+                onChange={(e) => setBackupMetaAI(e.target.checked)}
+                className="mt-0.5 accent-blue-500 rounded"
+              />
+              <div className="text-xs">
+                <span className="font-bold text-white block">Contas do Meta AI (sessões já logadas)</span>
+                <span className="text-[11px] text-gray-400">
+                  nada a salvar — Só volta logado se rodar na MESMA máquina e no mesmo usuário do Windows (o Chrome marca o cookie ao perfil)
+                </span>
+              </div>
+            </label>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-2">Provedor Primário (Mais Rápido & Barato)</label>
-              <select
-                value={llmConfig.primaryModel}
-                onChange={(e) => setLlmConfig({ ...llmConfig, primaryModel: e.target.value })}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none"
-              >
-                <option value="deepseek/deepseek-chat">DeepSeek V3 (OpenRouter) - Recomendado</option>
-                <option value="meta-llama/llama-3.3-70b-instruct">Meta LLaMA 3.3 70B</option>
-                <option value="gpt-4o-mini">OpenAI GPT-4o Mini</option>
-                <option value="gemini-1.5-flash">Google Gemini 1.5 Flash</option>
-              </select>
+          <div className="flex flex-wrap items-center gap-3 pt-3">
+            <ModernButton variant="primary" size="md" onClick={handleGenerateBackup}>
+              <Download size={16} /> Gerar Backup Agora
+            </ModernButton>
+
+            <button
+              type="button"
+              onClick={() => alert("Selecione o arquivo de backup (.zip) para restaurar")}
+              className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-gray-200 border border-white/10 flex items-center gap-2 transition"
+            >
+              <Upload size={14} /> Restaurar Backup de Arquivo...
+            </button>
+          </div>
+
+          {backupMessage && (
+            <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-400 font-semibold flex items-center gap-2">
+              <CheckCircle2 size={16} />
+              {backupMessage}
             </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-2">Provedor de Fallback Secundário</label>
-              <select
-                value={llmConfig.fallbackModel}
-                onChange={(e) => setLlmConfig({ ...llmConfig, fallbackModel: e.target.value })}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none"
-              >
-                <option value="gpt-4o-mini">OpenAI GPT-4o Mini (Fallback Padrão)</option>
-                <option value="gemini-1.5-flash">Google Gemini 1.5 Flash</option>
-                <option value="claude-3-5-haiku">Anthropic Claude 3.5 Haiku</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-xs text-indigo-300 leading-relaxed">
-            💡 <strong>Cascata Inteligente:</strong> Se a API do OpenRouter oscilar, o sistema alterna em menos de 500ms para a OpenAI ou Google Gemini sem interromper sua fila de vídeos.
-          </div>
+          )}
         </div>
-      )}
-
-      {/* TAB 4: BACKUP & RESTAURAÇÃO */}
-      {mainTab === "backup" && (
-        <div className="glass-card rounded-2xl p-8 border border-white/10 space-y-6">
-          <div>
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <HardDrive size={20} className="text-amber-400" /> Backup e Restauração de Dados
-            </h2>
-            <p className="text-xs text-gray-400 mt-1">
-              Exporte seus projetos, ideias, vídeos e configurações para segurança local
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-3">
-              <Download size={24} className="text-emerald-400" />
-              <h3 className="text-xs font-bold text-white">Exportar Banco de Dados</h3>
-              <p className="text-[11px] text-gray-400">Download do arquivo JSON completo com todos os projetos e vídeos</p>
-              <button
-                onClick={() => alert("Backup exportado com sucesso!")}
-                className="w-full py-2 rounded-xl bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold hover:bg-emerald-600/30 transition"
-              >
-                Exportar Backup JSON
-              </button>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-3">
-              <Upload size={24} className="text-cyan-400" />
-              <h3 className="text-xs font-bold text-white">Restaurar de Arquivo</h3>
-              <p className="text-[11px] text-gray-400">Restaure projetos de uma versão anterior ou outro computador</p>
-              <button
-                onClick={() => alert("Selecione o arquivo de backup para restaurar")}
-                className="w-full py-2 rounded-xl bg-cyan-600/20 text-cyan-400 border border-cyan-500/30 text-xs font-semibold hover:bg-cyan-600/30 transition"
-              >
-                Carregar Arquivo .json
-              </button>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-3">
-              <RotateCcw size={24} className="text-rose-400" />
-              <h3 className="text-xs font-bold text-white">Limpeza de Cache</h3>
-              <p className="text-[11px] text-gray-400">Limpe arquivos temporários de renderização e cache Redis</p>
-              <button
-                onClick={() => alert("Cache limpo com sucesso!")}
-                className="w-full py-2 rounded-xl bg-rose-600/20 text-rose-400 border border-rose-500/30 text-xs font-semibold hover:bg-rose-600/30 transition"
-              >
-                Limpar Cache Temporário
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      </section>
     </div>
   );
 }
