@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getConfigValue } from "./config-resolver";
 
 export interface GeneratedIdea {
   title: string;
@@ -17,9 +18,20 @@ export interface GeneratedScriptPayload {
 }
 
 export class MultiLLMOrchestrator {
-  private openRouterKey = process.env.OPENROUTER_API_KEY || "";
-  private openAIKey = process.env.OPENAI_API_KEY || "";
-  private geminiKey = process.env.GEMINI_API_KEY || "";
+  private openRouterKey = "";
+  private openAIKey = "";
+  private geminiKey = "";
+  private initialized = false;
+
+  private async ensureKeys(): Promise<void> {
+    if (this.initialized) return;
+    this.openRouterKey = await getConfigValue("OPENROUTER_API_KEY");
+    this.openAIKey = await getConfigValue("OPENAI_API_KEY");
+    this.geminiKey = await getConfigValue("GEMINI_API_KEY");
+    this.initialized = true;
+    // Re-init after 60s to pick up config changes
+    setTimeout(() => { this.initialized = false; }, 60_000);
+  }
 
   async generateIdeas(masterPrompt: string, theme: string, contextRAG: string = ""): Promise<GeneratedIdea[]> {
     const prompt = `
@@ -89,6 +101,8 @@ RETORNE EXATAMENTE UM JSON VALIDO COM O ROTEIRO COMPLETO PARA NARRAÇÃO, HEADLI
   }
 
   private async _callFallbackCascade(prompt: string): Promise<string> {
+    await this.ensureKeys();
+
     // 1. Try OpenRouter (Primary)
     if (this.openRouterKey) {
       try {

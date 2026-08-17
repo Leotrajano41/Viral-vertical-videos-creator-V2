@@ -283,3 +283,18 @@ model YoutubeAccount {
   @@index([userId])
   @@map("youtube_accounts")
 }
+
+// -----------------------------------------------------
+// 12. Model: AppSetting (In-App Credential Configuration)
+// -----------------------------------------------------
+model AppSetting {
+  id             String   @id @default(cuid())
+  key            String   @unique           // "OPENROUTER_API_KEY", "PEXELS_API_KEY", etc.
+  encryptedValue String   @map("encrypted_value")  // AES-256-CBC encrypted value
+  category       String   @default("general")      // "llm" | "media" | "storage" | "cache" | "youtube" | "billing"
+  isConfigured   Boolean  @default(false) @map("is_configured")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([category])
+  @@map("app_settings")
+}

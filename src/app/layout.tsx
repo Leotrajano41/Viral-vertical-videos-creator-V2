@@ -12,6 +12,7 @@ import {
   User,
   Zap,
   Sparkles,
+  Settings,
 } from "lucide-react";
 
 export const metadata = {
@@ -77,6 +78,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               >
                 <BarChart3 size={18} className="text-cyan-400 group-hover:text-cyan-300 transition" />
                 Analytics
+              </Link>
+
+              <div className="my-2 border-t border-white/[0.06]" />
+
+              <Link
+                href="/settings"
+                className="flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm font-semibold text-gray-300 hover:text-white hover:bg-white/10 transition-all group"
+              >
+                <Settings size={18} className="text-gray-400 group-hover:text-indigo-400 transition" />
+                Configurações
               </Link>
             </nav>
           </div>
