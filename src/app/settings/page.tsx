@@ -18,11 +18,11 @@ import {
   FileText,
   RotateCcw,
   Sparkles,
-  Info,
   Eye,
   EyeOff,
   TestTube2,
   Loader2,
+  Shield,
 } from "lucide-react";
 import { ModernButton } from "@/components/ui/modern/Button";
 
@@ -75,7 +75,7 @@ function ApiKeyRow({
       });
       const data = await res.json();
       if (res.ok) {
-        setSaveFeedback({ success: true, msg: `✓ Chave ${label} salva com sucesso!` });
+        setSaveFeedback({ success: true, msg: `✓ Chave ${label.split(" - ")[0]} salva com sucesso!` });
         setIsActive(true);
         setValue("");
         onRefresh();
@@ -215,7 +215,7 @@ function ApiKeyRow({
   );
 }
 
-export default function OriginalSettingsPage() {
+export default function OriginalLinearSettingsPage() {
   // 1. Renderizações simultâneas state
   const [renderMode, setRenderMode] = useState("auto");
   const [renderSaved, setRenderSaved] = useState(false);
@@ -240,10 +240,18 @@ export default function OriginalSettingsPage() {
   const [customVoices, setCustomVoices] = useState<Array<{ name: string; lang: string; file: string }>>([]);
   const [voiceSuccess, setVoiceSuccess] = useState(false);
 
-  // 6. Backup checkboxes state
-  const [backupSerial, setBackupSerial] = useState(true);
-  const [backupDatabase, setBackupDatabase] = useState(true);
-  const [backupMetaAI, setBackupMetaAI] = useState(false);
+  // 6. Backup checkboxes state (All original checkboxes)
+  const [backups, setBackups] = useState({
+    serial: true,
+    database: true,
+    metaAiAccounts: false,
+    metaAiProjects: false,
+    ytCookies: false,
+    ytChannels: false,
+    clonedVoices: false,
+    projectFolders: false,
+    renderedVideos: false,
+  });
   const [backupMessage, setBackupMessage] = useState("");
 
   const fetchApiKeysStatus = useCallback(async () => {
@@ -279,7 +287,7 @@ export default function OriginalSettingsPage() {
       ...prev,
       {
         name: customVoiceName,
-        lang: customVoiceLang === "pt" ? "Português" : "Inglês",
+        lang: customVoiceLang === "pt" ? "Português" : customVoiceLang === "en" ? "Inglês" : "Espanhol",
         file: customVoiceFile || "amostra_audio.wav",
       },
     ]);
@@ -304,7 +312,7 @@ export default function OriginalSettingsPage() {
           </div>
           <div>
             <h1 className="text-2xl md:text-3xl font-extrabold text-white">
-              Configurações
+              ⚙️ Configurações
             </h1>
             <p className="text-xs text-gray-300 mt-1">
               Ajustes do sistema, cookies do YouTube, chaves de API, vozes e backup
@@ -314,14 +322,14 @@ export default function OriginalSettingsPage() {
       </div>
 
       {/* =====================================================
-          1. RENDERIZAÇÕES SIMULTÂNEAS
+          SEÇÃO 1: RENDERIZAÇÕES SIMULTÂNEAS
           ===================================================== */}
       <section className="glass-card rounded-2xl p-6 md:p-8 border border-white/10 space-y-4">
         <h2 className="text-base font-bold text-blue-400 flex items-center gap-2">
           <Cpu size={18} /> Renderizações simultâneas
         </h2>
         <p className="text-xs text-gray-300 leading-relaxed">
-          Define quantos vídeos podem ser sintetizados e renderizados em paralelo pela GPU e CPU do seu computador.
+          Define quantos vídeos podem ser sintetizados e renderizados em paralelo pela GPU e CPU
         </p>
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 pt-2">
@@ -331,9 +339,9 @@ export default function OriginalSettingsPage() {
             className="w-full sm:w-80 bg-white/5 border border-white/10 text-xs font-semibold text-white rounded-xl px-4 py-2.5 focus:outline-none focus:border-blue-500 cursor-pointer"
           >
             <option value="auto">Automático (detecta GPU/CPU)</option>
-            <option value="1">1 vídeo por vez</option>
-            <option value="2">2 vídeos simultâneos</option>
-            <option value="3">3 vídeos simultâneos</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
           </select>
 
           <ModernButton variant="primary" size="sm" onClick={handleSaveRender}>
@@ -353,11 +361,11 @@ export default function OriginalSettingsPage() {
       </section>
 
       {/* =====================================================
-          2. YOUTUBE — COOKIES
+          SEÇÃO 2: YOUTUBE — COOKIES
           ===================================================== */}
       <section className="glass-card rounded-2xl p-6 md:p-8 border border-white/10 space-y-4">
         <h2 className="text-base font-bold text-blue-400 flex items-center gap-2">
-          <Youtube size={18} className="text-red-500" /> YouTube — cookies (contorna &quot;Sign in to confirm you&apos;re not a bot&quot;)
+          <Youtube size={18} className="text-red-500" /> YouTube — cookies (contorna &apos;Sign in to confirm you&apos;re not a bot&apos;)
         </h2>
         
         <p className="text-xs text-gray-300 leading-relaxed">
@@ -367,7 +375,7 @@ export default function OriginalSettingsPage() {
         <div className="space-y-3 pt-2">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] text-gray-400 mb-1">Modo de Captura de Cookies</label>
+              <label className="block text-[11px] text-gray-400 mb-1">Modo de Captura</label>
               <select
                 value={cookieMode}
                 onChange={(e) => setCookieMode(e.target.value)}
@@ -384,7 +392,7 @@ export default function OriginalSettingsPage() {
             </div>
 
             <div>
-              <label className="block text-[11px] text-gray-400 mb-1">Arquivo de Cookies Local</label>
+              <label className="block text-[11px] text-gray-400 mb-1">Arquivo cookies.txt</label>
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -398,7 +406,7 @@ export default function OriginalSettingsPage() {
                   onClick={() => alert("Selecione o arquivo cookies.txt exportado")}
                   className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-xs text-gray-300 font-semibold transition"
                 >
-                  Arquivo...
+                  Escolher arquivo...
                 </button>
               </div>
             </div>
@@ -423,7 +431,7 @@ export default function OriginalSettingsPage() {
       </section>
 
       {/* =====================================================
-          3. CHAVES DE API DA SUA CONTA (EDITÁVEL)
+          SEÇÃO 3: CHAVES DE API DA SUA CONTA (EDITÁVEIS)
           ===================================================== */}
       <section className="glass-card rounded-2xl p-6 md:p-8 border border-white/10 space-y-5">
         <div>
@@ -431,12 +439,12 @@ export default function OriginalSettingsPage() {
             <Key size={18} /> Chaves de API da sua conta
           </h2>
           <p className="text-xs text-gray-300 leading-relaxed mt-1">
-            Insira suas chaves de API para acessar os serviços de IA, transcrição e mídia. Cada chave será armazenada de forma segura com criptografia AES-256. Você pode atualizar a qualquer momento.
+            Insira suas chaves de API para acessar os serviços de IA, transcrição e mídia. Cada chave será armazenada de forma segura. Você pode atualizar a qualquer momento.
           </p>
         </div>
 
         <div className="space-y-4 pt-1">
-          {/* 1) OPENAI */}
+          {/* 1) OPENAI (IA) */}
           <ApiKeyRow
             provider="openai"
             keyName="OPENAI_API_KEY"
@@ -448,7 +456,7 @@ export default function OriginalSettingsPage() {
             onRefresh={fetchApiKeysStatus}
           />
 
-          {/* 2) ASSEMBLYAI */}
+          {/* 2) ASSEMBLYAI (TRANSCRIÇÃO) */}
           <ApiKeyRow
             provider="assemblyai"
             keyName="ASSEMBLY_API_KEY"
@@ -460,7 +468,7 @@ export default function OriginalSettingsPage() {
             onRefresh={fetchApiKeysStatus}
           />
 
-          {/* 3) PEXELS */}
+          {/* 3) PEXELS (BANCO DE VÍDEOS) */}
           <ApiKeyRow
             provider="pexels"
             keyName="PEXELS_API_KEY"
@@ -472,7 +480,7 @@ export default function OriginalSettingsPage() {
             onRefresh={fetchApiKeysStatus}
           />
 
-          {/* 4) PIXABAY */}
+          {/* 4) PIXABAY (BANCO DE MÍDIA) */}
           <ApiKeyRow
             provider="pixabay"
             keyName="PIXABAY_API_KEY"
@@ -487,7 +495,7 @@ export default function OriginalSettingsPage() {
       </section>
 
       {/* =====================================================
-          4. CLONAGEM DE VOZ (XTTS)
+          SEÇÃO 4: CLONAGEM DE VOZ (XTTS)
           ===================================================== */}
       <section className="glass-card rounded-2xl p-6 md:p-8 border border-white/10 space-y-4">
         <h2 className="text-base font-bold text-blue-400 flex items-center gap-2">
@@ -517,7 +525,7 @@ export default function OriginalSettingsPage() {
       </section>
 
       {/* =====================================================
-          5. ADICIONAR MINHA VOZ
+          SEÇÃO 5: ADICIONAR MINHA VOZ
           ===================================================== */}
       <section className="glass-card rounded-2xl p-6 md:p-8 border border-white/10 space-y-4">
         <h2 className="text-base font-bold text-blue-400 flex items-center gap-2">
@@ -609,7 +617,7 @@ export default function OriginalSettingsPage() {
       </section>
 
       {/* =====================================================
-          6. 💾 BACKUP E RESTAURAÇÃO DOS SEUS DADOS
+          SEÇÃO 6: BACKUP E RESTAURAÇÃO DOS SEUS DADOS
           ===================================================== */}
       <section className="glass-card rounded-2xl p-6 md:p-8 border border-white/10 space-y-5">
         <h2 className="text-base font-bold text-blue-400 flex items-center gap-2">
@@ -626,51 +634,136 @@ export default function OriginalSettingsPage() {
           </h3>
 
           <div className="space-y-2.5">
+            {/* 1. Licença */}
             <label className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 cursor-pointer transition">
               <input
                 type="checkbox"
-                checked={backupSerial}
-                onChange={(e) => setBackupSerial(e.target.checked)}
+                checked={backups.serial}
+                onChange={(e) => setBackups({ ...backups, serial: e.target.checked })}
                 className="mt-0.5 accent-blue-500 rounded"
               />
               <div className="text-xs">
                 <span className="font-bold text-white block">Licença ativada (serial)</span>
-                <span className="text-[11px] text-gray-400">1 arq, 1 KB — Sem isto o cliente tem que ativar o serial de novo</span>
+                <span className="text-[11px] text-gray-400">1 arq · 1 KB — Sem isto o cliente tem que ativar o serial de novo</span>
               </div>
             </label>
 
+            {/* 2. Projetos */}
             <label className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 cursor-pointer transition">
               <input
                 type="checkbox"
-                checked={backupDatabase}
-                onChange={(e) => setBackupDatabase(e.target.checked)}
+                checked={backups.database}
+                onChange={(e) => setBackups({ ...backups, database: e.target.checked })}
                 className="mt-0.5 accent-blue-500 rounded"
               />
               <div className="text-xs">
                 <span className="font-bold text-white block">Projetos, ideias, fila, histórico e ajustes</span>
-                <span className="text-[11px] text-gray-400">1 arq, 56 kB — O banco do app inteiro</span>
+                <span className="text-[11px] text-gray-400">1 arq · 56 KB — O banco do app inteiro</span>
               </div>
             </label>
 
+            {/* 3. Contas do Meta AI */}
             <label className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 cursor-pointer transition">
               <input
                 type="checkbox"
-                checked={backupMetaAI}
-                onChange={(e) => setBackupMetaAI(e.target.checked)}
+                checked={backups.metaAiAccounts}
+                onChange={(e) => setBackups({ ...backups, metaAiAccounts: e.target.checked })}
                 className="mt-0.5 accent-blue-500 rounded"
               />
               <div className="text-xs">
-                <span className="font-bold text-white block">Contas do Meta AI (sessões já logadas)</span>
-                <span className="text-[11px] text-gray-400">
-                  nada a salvar — Só volta logado se rodar na MESMA máquina e no mesmo usuário do Windows (o Chrome marca o cookie ao perfil)
-                </span>
+                <span className="font-bold text-white block">Contas do Meta AI</span>
+                <span className="text-[11px] text-gray-400">nada a salvar — Só volta logado se rodar na MESMA máquina e no mesmo usuário do Windows</span>
+              </div>
+            </label>
+
+            {/* 4. Ajustes do Meta AI */}
+            <label className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 cursor-pointer transition">
+              <input
+                type="checkbox"
+                checked={backups.metaAiProjects}
+                onChange={(e) => setBackups({ ...backups, metaAiProjects: e.target.checked })}
+                className="mt-0.5 accent-blue-500 rounded"
+              />
+              <div className="text-xs">
+                <span className="font-bold text-white block">Ajustes e projetos do Meta AI</span>
+                <span className="text-[11px] text-gray-400">nada a salvar</span>
+              </div>
+            </label>
+
+            {/* 5. Cookies YouTube */}
+            <label className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 cursor-pointer transition">
+              <input
+                type="checkbox"
+                checked={backups.ytCookies}
+                onChange={(e) => setBackups({ ...backups, ytCookies: e.target.checked })}
+                className="mt-0.5 accent-blue-500 rounded"
+              />
+              <div className="text-xs">
+                <span className="font-bold text-white block">Cookies do YouTube</span>
+                <span className="text-[11px] text-gray-400">nada a salvar</span>
+              </div>
+            </label>
+
+            {/* 6. Canais YouTube */}
+            <label className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 cursor-pointer transition">
+              <input
+                type="checkbox"
+                checked={backups.ytChannels}
+                onChange={(e) => setBackups({ ...backups, ytChannels: e.target.checked })}
+                className="mt-0.5 accent-blue-500 rounded"
+              />
+              <div className="text-xs">
+                <span className="font-bold text-white block">Canais do YouTube (contas já logadas)</span>
+                <span className="text-[11px] text-gray-400">nada a salvar</span>
+              </div>
+            </label>
+
+            {/* 7. Vozes Clonadas */}
+            <label className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 cursor-pointer transition">
+              <input
+                type="checkbox"
+                checked={backups.clonedVoices}
+                onChange={(e) => setBackups({ ...backups, clonedVoices: e.target.checked })}
+                className="mt-0.5 accent-blue-500 rounded"
+              />
+              <div className="text-xs">
+                <span className="font-bold text-white block">Vozes clonadas</span>
+                <span className="text-[11px] text-gray-400">nada a salvar</span>
+              </div>
+            </label>
+
+            {/* 8. Pastas dos Projetos */}
+            <label className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 cursor-pointer transition">
+              <input
+                type="checkbox"
+                checked={backups.projectFolders}
+                onChange={(e) => setBackups({ ...backups, projectFolders: e.target.checked })}
+                className="mt-0.5 accent-blue-500 rounded"
+              />
+              <div className="text-xs">
+                <span className="font-bold text-white block">Pastas dos projetos</span>
+                <span className="text-[11px] text-gray-400">pesado — Só precisa se quiser salvar vídeos/músicas locais</span>
+              </div>
+            </label>
+
+            {/* 9. Vídeos renderizados */}
+            <label className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 cursor-pointer transition">
+              <input
+                type="checkbox"
+                checked={backups.renderedVideos}
+                onChange={(e) => setBackups({ ...backups, renderedVideos: e.target.checked })}
+                className="mt-0.5 accent-blue-500 rounded"
+              />
+              <div className="text-xs">
+                <span className="font-bold text-white block">Vídeos renderizados fora dos projetos</span>
+                <span className="text-[11px] text-gray-400">pesado</span>
               </div>
             </label>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 pt-3">
             <ModernButton variant="primary" size="md" onClick={handleGenerateBackup}>
-              <Download size={16} /> Gerar Backup Agora
+              <Download size={16} /> 💾 Gerar Backup Agora
             </ModernButton>
 
             <button
@@ -678,7 +771,7 @@ export default function OriginalSettingsPage() {
               onClick={() => alert("Selecione o arquivo de backup (.zip) para restaurar")}
               className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-gray-200 border border-white/10 flex items-center gap-2 transition"
             >
-              <Upload size={14} /> Restaurar Backup de Arquivo...
+              <RotateCcw size={14} /> ↩ Restaurar Backup de Arquivo...
             </button>
           </div>
 
